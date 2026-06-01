@@ -9,10 +9,11 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 
 BASE_DIR     = os.path.abspath(os.path.dirname(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
+DATA_DIR = os.environ.get('DATA_DIR', os.path.join(BASE_DIR, 'data'))
+UPLOAD_FOLDER = os.path.join(DATA_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-app.config['SQLALCHEMY_DATABASE_URI']      = f"sqlite:///{os.path.join(BASE_DIR, 'journal.db')}"
+app.config['SQLALCHEMY_DATABASE_URI']      = f"sqlite:///{os.path.join(DATA_DIR, 'journal.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER']               = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH']          = 100 * 1024 * 1024  # 100 MB
