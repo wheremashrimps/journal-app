@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Folio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #0d0c0b;
+  --surface:  #141210;
+  --panel:    #1a1714;
+  --border:   #2a2520;
+  --border2:  #3a322a;
+  --text:     #c9bfb0;
+  --dim:      #6b6058;
+  --muted:    #8a7d72;
+  --gold:     #b8956a;
+  --gold-dim: #7a6040;
+  --red:      #8b3a3a;
+  --serif:    'Cormorant Garamond', Georgia, serif;
+  --mono:     'DM Mono', monospace;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--serif); font-size: 18px; overflow: hidden; }
+
+/* ── App shell ── */
+.app { display: grid; grid-template-columns: 270px 1fr; grid-template-rows: 52px 1fr; height: 100vh; }
+
+/* ── Header ── */
+header {
+  grid-column: 1/-1;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.wordmark { font-size: 1.3rem; font-weight: 300; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); font-style: italic; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+
+/* Tab switcher */
+.view-tabs { display: flex; gap: 2px; background: var(--bg); border-radius: 3px; padding: 3px; }
+.view-tab {
+  font-family: var(--mono); font-size: .6rem; letter-spacing: .12em; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 2px; border: none; background: transparent;
+  color: var(--dim); cursor: pointer; transition: all .2s;
+}
+.view-tab.active { background: var(--panel); color: var(--gold); }
+.view-tab:hover:not(.active) { color: var(--muted); }
+
+/* ── Sidebar ── */
+aside {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sb-section { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); }
+.sb-label { font-family: var(--mono); font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+
+input[type=text], input[type=date], input[type=search], textarea, select {
+  width: 100%; background: var(--panel); border: 1px solid var(--border2);
+  color: var(--text); font-family: var(--mono); font-size: .72rem;
+  padding: 7px 10px; border-radius: 3px; outline: none;
+}
+input[type=text]:focus, input[type=date]:focus, input[type=search]:focus,
+textarea:focus, select:focus { border-color: var(--gold-dim); }
+input::placeholder, textarea::placeholder { color: var(--dim); }
+input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.4); cursor: pointer; }
+
+.sort-pills { display: flex; gap: 5px; }
+.pill {
+  flex: 1; font-family: var(--mono); font-size: .6rem; letter-spacing: .08em; text-transform: uppercase;
+  padding: 5px 6px; border-radius: 2px; border: 1px solid var(--border2);
+  background: transparent; color: var(--muted); cursor: pointer; transition: all .18s; text-align: center;
+}
+.pill:hover { border-color: var(--gold-dim); color: var(--gold); }
+.pill.active { background: var(--gold-dim); border-color: var(--gold-dim); color: var(--bg); }
+
+select { margin-bottom: 7px; cursor: pointer; }
+
+.entry-list { flex: 1; overflow-y: auto; }
+.entry-list::-webkit-scrollbar { width: 3px; }
+.entry-list::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.group-header { font-family: var(--mono); font-size: .58rem; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); padding: 9px 16px 5px; background: var(--bg); border-bottom: 1px solid var(--border); }
+
+.entry-item {
+  padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer;
+  transition: background .12s; position: relative;
+}
+.entry-item:hover { background: var(--panel); }
+.entry-item.active { background: var(--panel); }
+.entry-item.active::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--gold); }
+.ei-title { font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ei-meta { font-family: var(--mono); font-size: .58rem; color: var(--dim); margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; }
+.ei-tag { color: var(--gold-dim); }
+.has-pin::after { content: '⬡'; font-size: .5rem; color: var(--gold-dim); margin-left: 4px; vertical-align: middle; }
+
+.no-entries { padding: 20px 16px; font-family: var(--mono); font-size: .65rem; color: var(--dim); text-align: center; }
+
+/* ── Main ── */
+main { overflow: hidden; display: flex; flex-direction: column; position: relative; }
+
+/* ── Views ── */
+.view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.view.active { display: flex; }
+
+/* Empty state */
+.empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--dim); gap:12px; }
+.empty-glyph { font-size:3.5rem; opacity:.12; font-style:italic; }
+.empty-state p { font-family:var(--mono); font-size:.65rem; letter-spacing:.15em; text-transform:uppercase; }
+
+/* ── Detail ── */
+.detail-scroll { flex:1; overflow-y:auto; padding:36px 48px; }
+.detail-scroll::-webkit-scrollbar { width:3px; }
+.detail-scroll::-webkit-scrollbar-thumb { background:var(--border2); }
+.detail-scroll > div { max-width: 740px; margin: 0 auto; }
+
+.detail-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:10px; }
+.detail-chips { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.chip { font-family:var(--mono); font-size:.6rem; padding:3px 8px; border:1px solid var(--border2); border-radius:2px; color:var(--gold-dim); }
+.detail-actions { display:flex; gap:8px; }
+
+.detail-title { font-size:2.4rem; font-weight:300; font-style:italic; line-height:1.2; margin-bottom:24px; }
+.detail-body { font-size:1rem; font-weight:300; line-height:1.9; color:var(--muted); white-space:pre-wrap; }
+
+.photo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:7px; margin-top:30px; }
+.photo-thumb { position:relative; aspect-ratio:1; overflow:hidden; border-radius:3px; border:1px solid var(--border); cursor:pointer; }
+.photo-thumb img { width:100%; height:100%; object-fit:cover; transition:transform .3s; display:block; }
+.photo-thumb:hover img { transform:scale(1.05); }
+.photo-del { position:absolute; top:5px; right:5px; background:rgba(0,0,0,.75); border:none; color:#fff; width:20px; height:20px; border-radius:50%; font-size:.65rem; cursor:pointer; display:none; align-items:center; justify-content:center; }
+.photo-thumb:hover .photo-del { display:flex; }
+
+.drop-area { border:1px dashed var(--border2); border-radius:3px; padding:16px; text-align:center; font-family:var(--mono); font-size:.65rem; color:var(--dim); cursor:pointer; transition:border-color .2s; margin-top:12px; }
+.drop-area:hover, .drop-area.drag-over { border-color:var(--gold-dim); color:var(--gold); }
+.drop-area input { display:none; }
+
+/* ── Form ── */
+.form-scroll { flex:1; overflow-y:auto; padding:36px 48px; }
+.form-scroll::-webkit-scrollbar { width:3px; }
+.form-scroll::-webkit-scrollbar-thumb { background:var(--border2); }
+.form-scroll > form { max-width:740px; margin:0 auto; }
+
+.f-label { font-family:var(--mono); font-size:.58rem; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); display:block; margin-bottom:6px; }
+.f-field { width:100%; background:transparent; border:none; border-bottom:1px solid var(--border2); color:var(--text); font-family:var(--serif); padding:6px 0 8px; margin-bottom:22px; outline:none; font-size:1rem; transition:border-color .2s; border-radius:0; }
+.f-field:focus { border-color:var(--gold-dim); }
+.f-title { font-size:2rem; font-style:italic; font-weight:300; }
+.f-body { resize:none; min-height:200px; font-weight:300; line-height:1.85; }
+.f-row { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.f-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; }
+.f-actions { display:flex; gap:10px; margin-top:4px; }
+
+/* Date field highlight */
+.f-date-wrap { position:relative; margin-bottom:22px; }
+.f-date-wrap .f-label { margin-bottom:6px; }
+.f-date-input { width:100%; background:var(--panel); border:1px solid var(--gold-dim); color:var(--gold); font-family:var(--mono); font-size:.8rem; padding:9px 12px; border-radius:3px; outline:none; cursor:pointer; }
+.f-date-input:focus { border-color:var(--gold); }
+
+/* Location picker */
+.location-row { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end; margin-bottom:22px; }
+.location-coords { font-family:var(--mono); font-size:.6rem; color:var(--dim); margin-top:4px; min-height:14px; }
+#pick-map { height:180px; border-radius:3px; border:1px solid var(--border2); margin-top:8px; display:none; }
+#pick-map.visible { display:block; }
+
+/* ── Map view ── */
+#map-view { position:relative; }
+#world-map { width:100%; height:100%; }
+.map-popup-title { font-family:'Cormorant Garamond',serif; font-size:1rem; font-style:italic; color:#c9bfb0; margin-bottom:2px; }
+.map-popup-meta { font-family:'DM Mono',monospace; font-size:.6rem; color:#8a7d72; }
+.map-popup-link { font-family:'DM Mono',monospace; font-size:.6rem; color:#b8956a; cursor:pointer; text-decoration:underline; }
+.map-empty { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--dim); gap:10px; pointer-events:none; }
+.map-empty p { font-family:var(--mono); font-size:.65rem; letter-spacing:.15em; text-transform:uppercase; }
+
+/* ── Buttons ── */
+.btn { font-family:var(--mono); font-size:.62rem; letter-spacing:.12em; text-transform:uppercase; padding:8px 16px; border-radius:2px; border:1px solid var(--border2); background:transparent; color:var(--muted); cursor:pointer; transition:all .18s; }
+.btn:hover { border-color:var(--gold-dim); color:var(--gold); }
+.btn-gold { background:var(--gold-dim); border-color:var(--gold-dim); color:var(--bg); }
+.btn-gold:hover { background:var(--gold); border-color:var(--gold); color:var(--bg); }
+.btn-danger { border-color:var(--red); color:var(--red); }
+.btn-danger:hover { background:var(--red); color:#fff; }
+.btn-sm { padding:5px 10px; font-size:.58rem; }
+
+/* ── Lightbox ── */
+.lightbox { position:fixed; inset:0; background:rgba(0,0,0,.93); display:flex; align-items:center; justify-content:center; z-index:9999; cursor:zoom-out; }
+.lightbox.hidden { display:none; }
+.lightbox img { max-width:90vw; max-height:90vh; object-fit:contain; border-radius:3px; }
+
+/* ── Toast ── */
+.toast { position:fixed; bottom:20px; right:20px; background:var(--panel); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:.65rem; padding:9px 16px; border-radius:3px; z-index:9998; opacity:0; transform:translateY(6px); transition:all .22s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+
+/* Leaflet dark overrides */
+.leaflet-container { background:#0d0c0b; font-family:var(--mono); }
+.leaflet-popup-content-wrapper { background:var(--panel); border:1px solid var(--border2); border-radius:3px; box-shadow:0 4px 20px rgba(0,0,0,.6); color:var(--text); }
+.leaflet-popup-tip { background:var(--panel); }
+.leaflet-popup-close-button { color:var(--dim) !important; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="wordmark">Folio</div>
+    <div class="header-right">
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="list">☰ Journal</button>
+        <button class="view-tab" data-view="map">⬡ Map</button>
+      </div>
+      <button class="btn btn-gold btn-sm" id="btn-new">+ New Entry</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside>
+    <div class="sb-section">
+      <div class="sb-label">Search</div>
+      <input type="search" id="search-input" placeholder="Search…">
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Sort by</div>
+      <div class="sort-pills">
+        <button class="pill active" data-sort="date">Date</button>
+        <button class="pill" data-sort="event">Event</button>
+        <button class="pill" data-sort="place">Place</button>
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Filter</div>
+      <select id="filter-event"><option value="">All events</option></select>
+      <select id="filter-place"><option value="">All places</option></select>
+      <button class="btn btn-sm" id="btn-clear" style="width:100%">Clear filters</button>
+    </div>
+    <div class="entry-list" id="entry-list">
+      <div class="no-entries">No entries yet</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main>
+
+    <!-- List view -->
+    <div class="view active" id="view-list">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-glyph">✦</div>
+        <p>Select or create an entry</p>
+      </div>
+    </div>
+
+    <!-- Map view -->
+    <div class="view" id="view-map">
+      <div id="world-map"></div>
+      <div class="map-empty" id="map-empty" style="display:none">
+        <div class="empty-glyph">⬡</div>
+        <p>No entries with locations yet</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox hidden" id="lightbox"><img id="lb-img" src="" alt=""></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let entries = [], activeId = null, sort = 'date', filterEvent = '', filterPlace = '', searchQ = '';
+let worldMap = null, pickMap = null, pickMarker = null, worldMarkers = [];
+let currentView = 'list';
+
+// ── API helpers ────────────────────────────────────────────────────────────
+const api = {
+  get:    url      => fetch(url).then(r => r.json()),
+  post:   (url, d) => fetch(url, {method:'POST',  headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)}).then(r=>r.json()),
+  put:    (url, d) => fetch(url, {method:'PUT',   headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)}).then(r=>r.json()),
+  del:    url      => fetch(url, {method:'DELETE'}).then(r=>r.json()),
+  upload: (url, fd)=> fetch(url, {method:'POST',  body:fd}).then(r=>r.json()),
+};
+
+// ── Load ───────────────────────────────────────────────────────────────────
+async function loadEntries() {
+  const p = new URLSearchParams({sort, event:filterEvent, place:filterPlace, search:searchQ});
+  entries = await api.get(`/api/entries?${p}`);
+  renderSidebar();
+  await loadMeta();
+  if (currentView === 'map') refreshWorldMap();
+}
+
+async function loadMeta() {
+  const [evs, pls] = await Promise.all([api.get('/api/meta/events'), api.get('/api/meta/places')]);
+  const ev = document.getElementById('filter-event').value;
+  const pl = document.getElementById('filter-place').value;
+  document.getElementById('filter-event').innerHTML = '<option value="">All events</option>' + evs.map(e=>`<option>${e}</option>`).join('');
+  document.getElementById('filter-place').innerHTML = '<option value="">All places</option>' + pls.map(p=>`<option>${p}</option>`).join('');
+  document.getElementById('filter-event').value = ev;
+  document.getElementById('filter-place').value = pl;
+}
+
+// ── Sidebar ────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('entry-list');
+  if (!entries.length) { list.innerHTML = '<div class="no-entries">No entries found</div>'; return; }
+
+  let html = '', lastGroup = null;
+  entries.forEach(e => {
+    const group = sort === 'event' ? (e.event||'—') : sort === 'place' ? (e.place||'—') : (e.entry_date||'—').slice(0,7);
+    if (group !== lastGroup) {
+      html += `<div class="group-header">${sort==='date' ? fmtMonth(group) : group}</div>`;
+      lastGroup = group;
+    }
+    const pin = (e.lat && e.lng) ? ' has-pin' : '';
+    html += `<div class="entry-item${e.id===activeId?' active':''}${pin}" data-id="${e.id}">
+      <div class="ei-title">${esc(e.title)}</div>
+      <div class="ei-meta">
+        <span>${fmtDate(e.entry_date)}</span>
+        ${e.place ? `<span class="ei-tag">📍 ${esc(e.place)}</span>` : ''}
+        ${e.event ? `<span class="ei-tag">◆ ${esc(e.event)}</span>` : ''}
+      </div>
+    </div>`;
+  });
+  list.innerHTML = html;
+  list.querySelectorAll('.entry-item').forEach(el => el.addEventListener('click', () => {
+    switchToListView();
+    openEntry(el.dataset.id);
+  }));
+}
+
+// ── Detail ────────────────────────────────────────────────────────────────
+async function openEntry(id) {
+  activeId = id;
+  renderSidebar();
+  const e = await api.get(`/api/entries/${id}`);
+
+  const chips = [
+    `<span class="chip">${fmtDate(e.entry_date)}</span>`,
+    e.event ? `<span class="chip">◆ ${esc(e.event)}</span>` : '',
+    e.place ? `<span class="chip">📍 ${esc(e.place)}</span>` : '',
+    (e.lat && e.lng) ? `<span class="chip" title="${e.lat.toFixed(4)}, ${e.lng.toFixed(4)}">⬡ mapped</span>` : '',
+  ].filter(Boolean).join('');
+
+  const photos = e.photos.map(p => `
+    <div class="photo-thumb">
+      <img src="${p.url}" alt="${esc(p.original_name||'')}" loading="lazy" onclick="openLB('${p.url}')">
+      <button class="photo-del" onclick="delPhoto('${p.id}','${id}',event)">✕</button>
+    </div>`).join('');
+
+  setListContent(`
+    <div class="detail-scroll"><div>
+      <div class="detail-top">
+        <div class="detail-chips">${chips}</div>
+        <div class="detail-actions">
+          <button class="btn btn-sm" onclick="openEditForm('${id}')">✎ Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="delEntry('${id}')">✕</button>
+        </div>
+      </div>
+      <div class="detail-title">${esc(e.title)}</div>
+      <div class="detail-body">${esc(e.body||'')}</div>
+      <div class="photo-grid" id="pg-${id}">${photos}</div>
+      <div class="drop-area" id="drop-${id}">
+        <input type="file" id="fi-${id}" accept="image/*" multiple>
+        Drop photos here or click to upload
+      </div>
+    </div></div>`);
+
+  const drop = document.getElementById(`drop-${id}`);
+  const fi   = document.getElementById(`fi-${id}`);
+  drop.addEventListener('click', () => fi.click());
+  drop.addEventListener('dragover', ev => { ev.preventDefault(); drop.classList.add('drag-over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+  drop.addEventListener('drop', async ev => { ev.preventDefault(); drop.classList.remove('drag-over'); await uploadFiles(id, ev.dataTransfer.files); });
+  fi.addEventListener('change', async () => await uploadFiles(id, fi.files));
+}
+
+async function uploadFiles(id, files) {
+  if (!files.length) return;
+  const fd = new FormData();
+  [...files].forEach(f => fd.append('photos', f));
+  const saved = await api.upload(`/api/entries/${id}/photos`, fd);
+  toast(`Uploaded ${saved.length} photo${saved.length!==1?'s':''}`);
+  openEntry(id);
+}
+
+async function delPhoto(pid, eid, ev) {
+  ev.stopPropagation();
+  if (!confirm('Delete this photo?')) return;
+  await api.del(`/api/photos/${pid}`);
+  toast('Photo deleted');
+  openEntry(eid);
+}
+
+async function delEntry(id) {
+  if (!confirm('Delete this entry and all its photos?')) return;
+  await api.del(`/api/entries/${id}`);
+  activeId = null;
+  toast('Entry deleted');
+  await loadEntries();
+  showEmpty();
+}
+
+// ── Forms ─────────────────────────────────────────────────────────────────
+function openNewForm() {
+  activeId = null;
+  renderSidebar();
+  renderForm({title:'', body:'', event:'', place:'', entry_date: today(), lat:null, lng:null}, false);
+}
+
+async function openEditForm(id) {
+  const e = await api.get(`/api/entries/${id}`);
+  renderForm(e, true);
+}
+
+function renderForm(e, isEdit) {
+  setListContent(`
+    <div class="form-scroll"><form onsubmit="return false">
+
+      <label class="f-label">Title</label>
+      <input class="f-field f-title" id="f-title" placeholder="Give this entry a title…" value="${esc(e.title)}">
+
+      <div class="f-date-wrap">
+        <label class="f-label" style="color:var(--gold-dim)">Date — adjust if writing about a past moment</label>
+        <input class="f-date-input" id="f-date" type="date" value="${e.entry_date || today()}">
+      </div>
+
+      <div class="f-row">
+        <div>
+          <label class="f-label">Event</label>
+          <input class="f-field" id="f-event" placeholder="e.g. Road trip" value="${esc(e.event||'')}">
+        </div>
+        <div>
+          <label class="f-label">Place name</label>
+          <input class="f-field" id="f-place" placeholder="e.g. Kelowna" value="${esc(e.place||'')}">
+        </div>
+      </div>
+
+      <label class="f-label">Pin on map — click map to set location</label>
+      <div class="location-row">
+        <div>
+          <div class="location-coords" id="coord-display">${e.lat && e.lng ? `${e.lat.toFixed(5)}, ${e.lng.toFixed(5)}` : 'No location set'}</div>
+        </div>
+        <button type="button" class="btn btn-sm" id="btn-toggle-map">📍 Pick location</button>
+      </div>
+      <input type="hidden" id="f-lat" value="${e.lat||''}">
+      <input type="hidden" id="f-lng" value="${e.lng||''}">
+      <div id="pick-map"></div>
+
+      <label class="f-label">Entry</label>
+      <textarea class="f-field f-body" id="f-body" placeholder="Write your thoughts…">${esc(e.body||'')}</textarea>
+
+      <div class="f-actions">
+        <button type="button" class="btn btn-gold" onclick="${isEdit ? `saveEdit('${e.id}')` : 'saveNew()'}">
+          ${isEdit ? 'Save changes' : 'Save entry'}
+        </button>
+        <button type="button" class="btn" onclick="${isEdit ? `openEntry('${e.id}')` : 'showEmpty()'}">Cancel</button>
+        ${isEdit ? `<button type="button" class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delEntry('${e.id}')">Delete</button>` : ''}
+      </div>
+    </form></div>`);
+
+  // Init pick map
+  setTimeout(() => {
+    const container = document.getElementById('pick-map');
+    const btn = document.getElementById('btn-toggle-map');
+    let shown = false;
+
+    btn.addEventListener('click', () => {
+      shown = !shown;
+      container.classList.toggle('visible', shown);
+      btn.textContent = shown ? '✕ Close map' : '📍 Pick location';
+      if (shown && !pickMap) {
+        const initLat = parseFloat(document.getElementById('f-lat').value) || 51;
+        const initLng = parseFloat(document.getElementById('f-lng').value) || 0;
+        pickMap = L.map('pick-map', {zoomControl:true}).setView([initLat, initLng], e.lat ? 10 : 2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19
+        }).addTo(pickMap);
+
+        if (e.lat && e.lng) {
+          pickMarker = L.circleMarker([e.lat, e.lng], markerStyle()).addTo(pickMap);
+        }
+
+        pickMap.on('click', ev => {
+          const {lat, lng} = ev.latlng;
+          document.getElementById('f-lat').value = lat;
+          document.getElementById('f-lng').value = lng;
+          document.getElementById('coord-display').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          if (pickMarker) pickMap.removeLayer(pickMarker);
+          pickMarker = L.circleMarker([lat, lng], markerStyle()).addTo(pickMap);
+        });
+      } else if (shown && pickMap) {
+        setTimeout(() => pickMap.invalidateSize(), 50);
+      }
+    });
+  }, 50);
+}
+
+function getFormData() {
+  return {
+    title:      document.getElementById('f-title').value.trim(),
+    body:       document.getElementById('f-body').value.trim(),
+    event:      document.getElementById('f-event').value.trim(),
+    place:      document.getElementById('f-place').value.trim(),
+    entry_date: document.getElementById('f-date').value,
+    lat:        parseFloat(document.getElementById('f-lat').value) || null,
+    lng:        parseFloat(document.getElementById('f-lng').value) || null,
+  };
+}
+
+async function saveNew() {
+  const data = getFormData();
+  if (!data.title) { toast('Please add a title'); return; }
+  pickMap = null; pickMarker = null;
+  const entry = await api.post('/api/entries', data);
+  toast('Entry created');
+  await loadEntries();
+  openEntry(entry.id);
+}
+
+async function saveEdit(id) {
+  const data = getFormData();
+  if (!data.title) { toast('Please add a title'); return; }
+  pickMap = null; pickMarker = null;
+  await api.put(`/api/entries/${id}`, data);
+  toast('Saved');
+  await loadEntries();
+  openEntry(id);
+}
+
+// ── Map view ───────────────────────────────────────────────────────────────
+function initWorldMap() {
+  if (worldMap) return;
+  worldMap = L.map('world-map').setView([30, 10], 2);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19
+  }).addTo(worldMap);
+}
+
+function refreshWorldMap() {
+  initWorldMap();
+  worldMarkers.forEach(m => worldMap.removeLayer(m));
+  worldMarkers = [];
+
+  const mapped = entries.filter(e => e.lat && e.lng);
+  document.getElementById('map-empty').style.display = mapped.length ? 'none' : 'flex';
+
+  mapped.forEach(e => {
+    const m = L.circleMarker([e.lat, e.lng], markerStyle(10)).addTo(worldMap);
+    const tags = [e.place && `📍 ${e.place}`, e.event && `◆ ${e.event}`].filter(Boolean).join(' &nbsp;·&nbsp; ');
+    m.bindPopup(`
+      <div class="map-popup-title">${esc(e.title)}</div>
+      <div class="map-popup-meta">${fmtDate(e.entry_date)}${tags ? ' &nbsp;·&nbsp; ' + tags : ''}</div>
+      <div class="map-popup-link" onclick="viewEntryFromMap('${e.id}')">Open entry →</div>
+    `, {maxWidth: 240});
+    worldMarkers.push(m);
+  });
+}
+
+function viewEntryFromMap(id) {
+  switchToListView();
+  openEntry(id);
+}
+
+// ── View switching ─────────────────────────────────────────────────────────
+function switchToListView() {
+  currentView = 'list';
+  document.getElementById('view-list').classList.add('active');
+  document.getElementById('view-map').classList.remove('active');
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.view==='list'));
+}
+
+function switchToMapView() {
+  currentView = 'map';
+  document.getElementById('view-map').classList.add('active');
+  document.getElementById('view-list').classList.remove('active');
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.view==='map'));
+  setTimeout(() => {
+    initWorldMap();
+    worldMap.invalidateSize();
+    refreshWorldMap();
+  }, 50);
+}
+
+// ── DOM helpers ────────────────────────────────────────────────────────────
+function setListContent(html) {
+  const v = document.getElementById('view-list');
+  v.innerHTML = html;
+}
+function showEmpty() {
+  activeId = null;
+  renderSidebar();
+  setListContent(`<div class="empty-state"><div class="empty-glyph">✦</div><p>Select or create an entry</p></div>`);
+}
+
+function markerStyle(r=8) {
+  return { radius:r, fillColor:'#b8956a', color:'#7a6040', weight:1.5, opacity:1, fillOpacity:.85 };
+}
+
+// ── Lightbox ───────────────────────────────────────────────────────────────
+function openLB(url) { document.getElementById('lb-img').src=url; document.getElementById('lightbox').classList.remove('hidden'); }
+document.getElementById('lightbox').addEventListener('click', () => document.getElementById('lightbox').classList.add('hidden'));
+
+// ── Util ───────────────────────────────────────────────────────────────────
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(d){ if(!d) return '—'; return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+function fmtMonth(ym){ if(!ym||ym==='—') return '—'; const [y,m]=ym.split('-'); return new Date(y,m-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'}); }
+
+let _t;
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_t); _t=setTimeout(()=>el.classList.remove('show'),2800); }
+
+// ── Event wiring ───────────────────────────────────────────────────────────
+document.getElementById('btn-new').addEventListener('click', () => { switchToListView(); openNewForm(); });
+
+document.querySelectorAll('.view-tab').forEach(tab => tab.addEventListener('click', () => {
+  tab.dataset.view === 'map' ? switchToMapView() : switchToListView();
+}));
+
+document.querySelectorAll('.pill').forEach(p => p.addEventListener('click', () => {
+  document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+  p.classList.add('active'); sort = p.dataset.sort; loadEntries();
+}));
+
+let _s;
+document.getElementById('search-input').addEventListener('input', e => {
+  clearTimeout(_s); searchQ = e.target.value.trim(); _s = setTimeout(loadEntries, 300);
+});
+
+document.getElementById('filter-event').addEventListener('change', e => { filterEvent = e.target.value; loadEntries(); });
+document.getElementById('filter-place').addEventListener('change', e => { filterPlace = e.target.value; loadEntries(); });
+document.getElementById('btn-clear').addEventListener('click', () => {
+  filterEvent=''; filterPlace='';
+  document.getElementById('filter-event').value='';
+  document.getElementById('filter-place').value='';
+  loadEntries();
+});
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+loadEntries();
+</script>
+</body>
+</html>
