@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Folio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -208,13 +208,69 @@ input.f-field[type=text],input.f-field:not([type]){background:transparent;paddin
 .map-popup-meta{font-size:.78rem;color:var(--text2);margin-bottom:6px}
 .map-popup-dist{font-size:.78rem;color:var(--text2)}
 .map-popup-link{font-size:.82rem;font-weight:500;color:var(--accent);cursor:pointer;margin-top:6px;display:inline-block}
+
+/* ── Phone: list full screen, detail pushes in from the right ── */
+.hdr-left{display:flex;align-items:center;min-width:0}
+.back-btn{display:none;align-items:center;gap:1px;background:none;border:none;color:var(--accent);font:400 1.05rem var(--font);cursor:pointer;padding:6px 6px 6px 0;margin-left:-6px;letter-spacing:-.02em}
+.back-btn .ico{font-size:1.45rem;stroke-width:2.2}
+.back-btn:active{opacity:.5}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:calc(52px + env(safe-area-inset-top)) 1fr;height:100dvh;overflow:hidden}
+  header{padding:env(safe-area-inset-top) max(12px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
+  .wordmark{font-size:1.15rem;gap:8px}
+  .wordmark-badge{width:24px;height:24px}
+  .hdr-right{gap:10px}
+  .view-tab{padding:5px 12px;gap:5px}
+  .app.detail-open:not(.map-mode) .wordmark{display:none}
+  .app.detail-open:not(.map-mode) .back-btn{display:flex}
+
+  aside,main{grid-row:2;grid-column:1;min-height:0}
+  aside{border-right:none;background:var(--bg);transition:transform .42s var(--ease),filter .42s var(--ease)}
+  main{z-index:2;transform:translateX(100%);transition:transform .42s var(--ease),box-shadow .42s var(--ease)}
+  .app.detail-open main{transform:none;box-shadow:-12px 0 32px rgba(0,0,0,.55)}
+  .app.detail-open aside{transform:translateX(-28%);filter:brightness(.55)}
+  .app.map-mode main{transform:none;box-shadow:none}
+  .app.no-anim main,.app.no-anim aside{transition:none}
+
+  /* list */
+  .sb-sec{padding:10px 16px 4px}
+  .sb-sec:last-of-type{padding-bottom:10px}
+  .grp-hdr{font-size:1.15rem;padding:18px 8px 6px;background:linear-gradient(var(--bg) 75%,transparent)}
+  .entry-list{padding:0 8px calc(24px + env(safe-area-inset-bottom))}
+  .entry-item{padding:12px 12px}
+  .ei-title{font-size:1rem}
+  .ei-meta{font-size:.84rem;margin-top:3px}
+  /* 16px stops iOS Safari zooming into focused fields */
+  input,textarea,select,input[type=date]{font-size:16px}
+  .f-title{font-size:1.3rem}
+
+  /* detail + form */
+  .scroll-wrap{padding:18px 18px calc(56px + env(safe-area-inset-bottom));animation:none}
+  .detail-top{flex-wrap:wrap}
+  .detail-date{font-size:.78rem}
+  .detail-title{font-size:1.9rem;margin-bottom:12px}
+  .chips{margin-bottom:22px}
+  .detail-body{font-size:1.04rem}
+  .section-title{margin-top:30px}
+  .photo-grid{grid-template-columns:repeat(3,1fr);gap:3px;border-radius:12px}
+  .upload-row{grid-template-columns:1fr 1fr}
+  .drop-area,.gpx-drop{padding:14px 10px;font-size:.82rem}
+  .track-map{height:230px}
+  .form-title{font-size:1.75rem;margin-bottom:18px}
+  .group-row>label{width:70px}
+  .toast{bottom:calc(24px + env(safe-area-inset-bottom))}
+}
+@media (hover:none){.photo-del{opacity:1;transform:none}}
 </style>
 </head>
 <body>
 <div class="app">
 
 <header>
-  <div class="wordmark"><span class="wordmark-badge" id="wm-badge"></span>Folio</div>
+  <div class="hdr-left">
+    <button class="back-btn" id="btn-back" data-ico="chevL">Journal</button>
+    <div class="wordmark"><span class="wordmark-badge" id="wm-badge"></span>Folio</div>
+  </div>
   <div class="hdr-right">
     <div class="view-tabs">
       <button class="view-tab active" data-view="list" data-ico="list">Journal</button>
@@ -279,6 +335,7 @@ const ICONS={
   trash:'<path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13"/>',
   photo:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 8"/>',
   play:'<path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="none"/>',
+  chevL:'<path d="m14.5 5.5-6.5 6.5 6.5 6.5"/>',
   xmark:'<path d="M6 6l12 12M18 6 6 18"/>',
   book:'<path d="M5 4.5h9.5a2.5 2.5 0 0 1 2.5 2.5v12.5H7.5A2.5 2.5 0 0 1 5 17V4.5z"/><path d="M5 17a2.5 2.5 0 0 1 2.5-2.5H17"/>',
 };
@@ -397,6 +454,7 @@ async function openEntry(id){
     ${trackSection}
   </div></div>`);
 
+  openDetail();
   // Wire photo upload
   wireDropArea(`drop-img-${id}`, `fi-${id}`, files=>uploadFiles(id,files));
   // Wire GPX upload
@@ -553,6 +611,7 @@ function renderForm(e,isEdit){
       ${isEdit?`<button type="button" class="btn btn-danger" style="margin-left:auto" onclick="delEntry('${e.id}')">${ico('trash')}Delete</button>`:''}
     </div>
   </form></div>`);
+  openDetail();
 
   setTimeout(()=>{
     const btn=document.getElementById('btn-toggle-map');
@@ -652,14 +711,38 @@ function refreshWorldMap(){
 function viewFromMap(id){switchToListView();openEntry(id);}
 
 // ── View switching ────────────────────────────────────────────────────────
+// On phones the detail pane slides over the list; it gets a history entry so the
+// system back gesture returns to the list instead of leaving the app.
+const appEl=document.querySelector('.app');
+const phone=matchMedia('(max-width:760px)');
+let detailPushed=false;
+function detailOpen(){return appEl.classList.contains('detail-open');}
+function openDetail(){
+  if(detailOpen()) return;
+  appEl.classList.add('detail-open');
+  if(phone.matches){history.pushState({detail:1},'');detailPushed=true;}
+}
+function closeDetail(){
+  if(!detailOpen()) return;
+  appEl.classList.remove('detail-open');
+  if(detailPushed){detailPushed=false;history.back();}
+}
+function goBack(){closeDetail();activeId=null;renderSidebar();}
+window.addEventListener('popstate',()=>{detailPushed=false;if(detailOpen())goBack();});
+function setMapMode(on){
+  if(appEl.classList.contains('map-mode')===on) return;
+  appEl.classList.add('no-anim');
+  appEl.classList.toggle('map-mode',on);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>appEl.classList.remove('no-anim')));
+}
 function switchToListView(){
-  currentView='list';
+  currentView='list'; setMapMode(false);
   document.getElementById('view-list').classList.add('active');
   document.getElementById('view-map').classList.remove('active');
   document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view==='list'));
 }
 function switchToMapView(){
-  currentView='map';
+  currentView='map'; setMapMode(true);
   document.getElementById('view-map').classList.add('active');
   document.getElementById('view-list').classList.remove('active');
   document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view==='map'));
@@ -668,7 +751,11 @@ function switchToMapView(){
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function setListContent(html){document.getElementById('view-list').innerHTML=html;}
-function showEmpty(){activeId=null;renderSidebar();setListContent(`<div class="empty-state"><div class="empty-glyph">${ico('book')}</div><p>No entry selected</p><small>Choose one from the list, or press + to write a new one.</small></div>`);}
+function showEmpty(){
+  activeId=null;renderSidebar();
+  // On phones, let the pane slide away before swapping its contents
+  if(phone.matches&&detailOpen()){closeDetail();setTimeout(()=>{if(!detailOpen())showEmpty();},450);return;}
+  setListContent(`<div class="empty-state"><div class="empty-glyph">${ico('book')}</div><p>No entry selected</p><small>Choose one from the list, or press + to write a new one.</small></div>`);}
 function fmtLongDate(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
 function pinStyle(r=8){return{radius:r,fillColor:'#0a84ff',color:'#fff',weight:2.5,opacity:1,fillOpacity:1};}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -699,6 +786,7 @@ document.getElementById('lightbox').addEventListener('click',()=>{
 });
 
 // ── Events ────────────────────────────────────────────────────────────────
+document.getElementById('btn-back').addEventListener('click',goBack);
 document.getElementById('btn-new').addEventListener('click',()=>{switchToListView();openNewForm();});
 document.querySelectorAll('.view-tab').forEach(tab=>tab.addEventListener('click',()=>tab.dataset.view==='map'?switchToMapView():switchToListView()));
 document.querySelectorAll('.pill').forEach(p=>p.addEventListener('click',()=>{document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');sort=p.dataset.sort;loadEntries();}));
