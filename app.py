@@ -317,7 +317,7 @@ def parse_gpx(path):
 
 # ── Passcode lock ─────────────────────────────────────────────────────────────
 
-PUBLIC_PATHS = ('/login', '/s/', '/manifest.webmanifest', '/sw.js', '/static/icons/', '/static/style.css')
+PUBLIC_PATHS = ('/healthz', '/login', '/s/', '/manifest.webmanifest', '/sw.js', '/static/icons/', '/static/style.css')
 
 
 @app.before_request
@@ -327,6 +327,12 @@ def require_passcode():
     if request.path == '/':
         return redirect(url_for('login'))
     return jsonify({'error': 'locked'}), 401
+
+
+@app.route('/healthz')
+def healthz():
+    """Railway's deploy health check; must answer 200 even while Folio is locked."""
+    return 'ok'
 
 
 @app.route('/login', methods=['GET', 'POST'])
