@@ -2,11 +2,17 @@ import os
 import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template
+from flask import (Flask, request, jsonify, render_template, redirect, abort,
+                   send_from_directory, Response)
 from flask_sqlalchemy import SQLAlchemy
+from itsdangerous import URLSafeTimedSerializer, BadSignature
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
+import drive
+
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # Railway terminates HTTPS
 
 BASE_DIR     = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.environ.get('DATA_DIR', os.path.join(BASE_DIR, 'data'))
@@ -19,6 +25,7 @@ app.config['UPLOAD_FOLDER']               = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH']          = 100 * 1024 * 1024  # 100 MB
 
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'mov', 'm4v', 'webm'}
 ALLOWED_GPX_EXTENSIONS   = {'gpx'}
 
 db = SQLAlchemy(app)
@@ -56,15 +63,42 @@ class Entry(db.Model):
 
 
 class Photo(db.Model):
+    """A photo or video. Stored in UPLOAD_FOLDER, or in Google Drive when drive_id is set."""
     id            = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     entry_id      = db.Column(db.String(36), db.ForeignKey('entry.id'), nullable=False)
     filename      = db.Column(db.String(300), nullable=False)
     original_name = db.Column(db.String(300), nullable=True)
     uploaded_at   = db.Column(db.DateTime,   default=datetime.utcnow)
+    drive_id      = db.Column(db.String(100), nullable=True)
+    mime_type     = db.Column(db.String(100), nullable=True)
+
+    @property
+    def kind(self):
+        if self.mime_type:
+            return 'video' if self.mime_type.startswith('video/') else 'image'
+        ext = self.filename.rsplit('.', 1)[-1].lower()
+        return 'video' if ext in ALLOWED_VIDEO_EXTENSIONS else 'image'
 
     def to_dict(self):
-        return {'id': self.id, 'filename': self.filename,
-                'original_name': self.original_name, 'url': f'/static/uploads/{self.filename}'}
+        return {'id': self.id, 'filename': self.filename, 'original_name': self.original_name,
+                'kind': self.kind, 'url': f'/media/{self.id}'}
+
+
+class Setting(db.Model):
+    key   = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.Text, nullable=True)
+
+
+def get_setting(key):
+    row = db.session.get(Setting, key)
+    return row.value if row else None
+
+
+def set_setting(key, value):
+    row = db.session.get(Setting, key) or Setting(key=key)
+    row.value = value
+    db.session.add(row)
+    db.session.commit()
 
 
 class Track(db.Model):
@@ -88,7 +122,7 @@ class Track(db.Model):
             'distance_km':   self.distance_km,
             'points':        pts,
             'bbox':          self.bbox,
-            'gpx_url':       f'/static/uploads/{self.filename}',
+            'gpx_url':       f'/uploads/{self.filename}',
         }
 
 
@@ -98,10 +132,15 @@ with app.app_context():
     from sqlalchemy import inspect, text
     inspector = inspect(db.engine)
     ecols = [c['name'] for c in inspector.get_columns('entry')]
+    pcols = [c['name'] for c in inspector.get_columns('photo')]
     with db.engine.connect() as conn:
         for col in ('lat', 'lng'):
             if col not in ecols:
                 conn.execute(text(f'ALTER TABLE entry ADD COLUMN {col} FLOAT'))
+                conn.commit()
+        for col, typ in (('drive_id', 'VARCHAR(100)'), ('mime_type', 'VARCHAR(100)')):
+            if col not in pcols:
+                conn.execute(text(f'ALTER TABLE photo ADD COLUMN {col} {typ}'))
                 conn.commit()
 
 
@@ -247,8 +286,7 @@ def update_entry(entry_id):
 def delete_entry(entry_id):
     entry = Entry.query.get_or_404(entry_id)
     for photo in entry.photos:
-        p = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
-        if os.path.exists(p): os.remove(p)
+        remove_media(photo)
     for track in entry.tracks:
         p = os.path.join(app.config['UPLOAD_FOLDER'], track.filename)
         if os.path.exists(p): os.remove(p)
@@ -262,7 +300,7 @@ def upload_photos(entry_id):
     entry = Entry.query.get_or_404(entry_id)
     saved = []
     for file in request.files.getlist('photos'):
-        if file and '.' in file.filename and file.filename.rsplit('.',1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS:
+        if file and '.' in file.filename and file.filename.rsplit('.',1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS:
             ext  = file.filename.rsplit('.',1)[1].lower()
             name = f"{uuid.uuid4().hex}.{ext}"
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], name))
@@ -275,11 +313,142 @@ def upload_photos(entry_id):
 @app.route('/api/photos/<photo_id>', methods=['DELETE'])
 def delete_photo(photo_id):
     photo = Photo.query.get_or_404(photo_id)
-    p = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
-    if os.path.exists(p): os.remove(p)
+    remove_media(photo)
     db.session.delete(photo)
     db.session.commit()
     return jsonify({'deleted': True})
+
+
+# ── Media (local files and Google Drive) ──────────────────────────────────────
+
+MEDIA_CHUNK = 8 * 1024 * 1024  # cap open-ended range requests so video seeks stay quick
+
+
+def drive_token():
+    return get_setting('drive_refresh_token')
+
+
+def remove_media(photo):
+    if photo.drive_id:
+        try:
+            drive.trash(drive_token(), photo.drive_id)
+        except drive.DriveError as e:
+            app.logger.warning('Could not trash Drive file %s: %s', photo.drive_id, e)
+        return
+    p = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
+    if os.path.exists(p): os.remove(p)
+
+
+@app.route('/uploads/<path:filename>')
+@app.route('/static/uploads/<path:filename>')  # URLs saved before media moved to DATA_DIR
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, max_age=31536000)
+
+
+@app.route('/media/<photo_id>')
+def media(photo_id):
+    photo = Photo.query.get_or_404(photo_id)
+    if not photo.drive_id:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], photo.filename, max_age=31536000)
+
+    rng = request.headers.get('Range')
+    if rng and rng.startswith('bytes=') and rng.endswith('-'):
+        start = int(rng[6:-1] or 0)
+        rng = f'bytes={start}-{start + MEDIA_CHUNK - 1}'
+    try:
+        upstream = drive.open_media(drive_token(), photo.drive_id, rng)
+    except drive.DriveError as e:
+        app.logger.warning('%s', e)
+        abort(502)
+
+    headers = {'Accept-Ranges': 'bytes', 'Cache-Control': 'private, max-age=31536000, immutable'}
+    for h in ('Content-Length', 'Content-Range'):
+        if h in upstream.headers:
+            headers[h] = upstream.headers[h]
+
+    def body():
+        try:
+            yield from upstream.iter_content(256 * 1024)
+        finally:
+            upstream.close()
+
+    return Response(body(), status=upstream.status_code, headers=headers,
+                    mimetype=photo.mime_type or upstream.headers.get('Content-Type'))
+
+
+@app.route('/api/drive/status')
+def drive_status():
+    return jsonify({'configured': drive.configured(), 'connected': bool(drive_token())})
+
+
+def _state_signer():
+    return URLSafeTimedSerializer(os.environ.get('DRIVE_SETUP_KEY', ''), salt='drive-connect')
+
+
+@app.route('/drive/connect')
+def drive_connect():
+    # Only the owner, holding DRIVE_SETUP_KEY, may point Folio at a Drive account.
+    key = os.environ.get('DRIVE_SETUP_KEY')
+    if not drive.configured() or not key:
+        return 'Google Drive is not configured on the server.', 503
+    if request.args.get('key') != key:
+        abort(403)
+    return redirect(drive.auth_url(f'{request.host_url}drive/callback', _state_signer().dumps('connect')))
+
+
+@app.route('/drive/callback')
+def drive_callback():
+    try:
+        _state_signer().loads(request.args.get('state', ''), max_age=900)
+    except BadSignature:
+        abort(403)
+    if 'error' in request.args:
+        return f"Google said: {request.args['error']}", 400
+    try:
+        refresh = drive.exchange_code(request.args.get('code', ''), f'{request.host_url}drive/callback')
+        set_setting('drive_refresh_token', refresh)
+        if not get_setting('drive_folder_id'):
+            set_setting('drive_folder_id', drive.create_folder(refresh))
+    except drive.DriveError as e:
+        return f'Could not connect Google Drive: {e}', 400
+    return redirect('/?drive=connected')
+
+
+@app.route('/api/entries/<entry_id>/media/start', methods=['POST'])
+def start_media_upload(entry_id):
+    Entry.query.get_or_404(entry_id)
+    if not drive_token():
+        return jsonify({'error': 'Google Drive is not connected'}), 409
+    data = request.get_json() or {}
+    mime = data.get('mime') or ''
+    if not (mime.startswith('image/') or mime.startswith('video/')):
+        return jsonify({'error': 'Only photos and videos can be uploaded'}), 400
+    try:
+        url = drive.start_upload(drive_token(), get_setting('drive_folder_id'),
+                                 secure_filename(data.get('name') or 'upload') or 'upload',
+                                 mime, int(data.get('size') or 0), request.headers.get('Origin'))
+    except drive.DriveError as e:
+        return jsonify({'error': str(e)}), 502
+    return jsonify({'upload_url': url})
+
+
+@app.route('/api/entries/<entry_id>/media/finish', methods=['POST'])
+def finish_media_upload(entry_id):
+    entry = Entry.query.get_or_404(entry_id)
+    data  = request.get_json() or {}
+    try:
+        meta = drive.get_meta(drive_token(), data.get('drive_id', ''))
+    except drive.DriveError as e:
+        return jsonify({'error': str(e)}), 400
+    if get_setting('drive_folder_id') not in meta.get('parents', []):
+        return jsonify({'error': 'File is not in the Folio folder'}), 400
+    if Photo.query.filter_by(drive_id=meta['id']).first():
+        return jsonify({'error': 'Already added'}), 409
+    p = Photo(entry_id=entry.id, filename=meta['name'], original_name=meta['name'],
+              drive_id=meta['id'], mime_type=meta.get('mimeType'))
+    db.session.add(p)
+    db.session.commit()
+    return jsonify(p.to_dict()), 201
 
 
 @app.route('/api/entries/<entry_id>/tracks', methods=['POST'])

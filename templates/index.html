@@ -101,6 +101,8 @@ main{overflow:hidden;display:flex;flex-direction:column;position:relative}
 .photo-thumb{position:relative;aspect-ratio:1;overflow:hidden;border-radius:3px;border:1px solid var(--border);cursor:pointer}
 .photo-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .3s;display:block}
 .photo-thumb:hover img{transform:scale(1.05)}
+.photo-thumb video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.photo-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.6rem;text-shadow:0 1px 6px rgba(0,0,0,.8);pointer-events:none}
 .photo-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.78);border:none;color:#fff;width:20px;height:20px;border-radius:50%;font-size:.62rem;cursor:pointer;display:none;align-items:center;justify-content:center}
 .photo-thumb:hover .photo-del{display:flex}
 .drop-area{border:1px dashed var(--border2);border-radius:3px;padding:14px;text-align:center;font-family:var(--mono);font-size:.63rem;color:var(--dim);cursor:pointer;transition:border-color .2s;margin-top:10px}
@@ -147,7 +149,8 @@ main{overflow:hidden;display:flex;flex-direction:column;position:relative}
 /* ── Lightbox ── */
 .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out}
 .lightbox.hidden{display:none}
-.lightbox img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:3px}
+.lightbox img,.lightbox video{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:3px}
+.lightbox video{cursor:auto}
 
 /* ── Toast ── */
 .toast{position:fixed;bottom:18px;right:18px;background:var(--panel);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:.63rem;padding:8px 15px;border-radius:3px;z-index:9998;opacity:0;transform:translateY(5px);transition:all .22s;pointer-events:none}
@@ -213,7 +216,7 @@ main{overflow:hidden;display:flex;flex-direction:column;position:relative}
 </main>
 </div>
 
-<div class="lightbox hidden" id="lightbox"><img id="lb-img" src="" alt=""></div>
+<div class="lightbox hidden" id="lightbox"><img id="lb-img" src="" alt=""><video id="lb-vid" controls playsinline hidden></video></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -222,6 +225,7 @@ let entries=[], activeId=null, sort='date', filterEvent='', filterPlace='', sear
 let worldMap=null, worldLayers=[], pickMap=null, pickMarker=null;
 let currentView='list';
 let detailTrackMap=null;
+let driveConnected=false;
 
 // ── API ────────────────────────────────────────────────────────────────────
 const api={
@@ -284,8 +288,10 @@ async function openEntry(id){
   ].filter(Boolean).join('');
 
   const photos=e.photos.map(p=>`
-    <div class="photo-thumb">
-      <img src="${p.url}" alt="${esc(p.original_name||'')}" loading="lazy" onclick="openLB('${p.url}')">
+    <div class="photo-thumb" onclick="openLB('${p.url}','${p.kind}')">
+      ${p.kind==='video'
+        ?`<video src="${p.url}#t=0.1" preload="metadata" muted playsinline></video><span class="photo-play">▶</span>`
+        :`<img src="${p.url}" alt="${esc(p.original_name||'')}" loading="lazy">`}
       <button class="photo-del" onclick="delPhoto('${p.id}','${id}',event)">✕</button>
     </div>`).join('');
 
@@ -322,8 +328,8 @@ async function openEntry(id){
     ${trackSection}
     <div class="photo-grid" id="pg-${id}">${photos}</div>
     <div class="drop-area" id="drop-img-${id}">
-      <input type="file" id="fi-${id}" accept="image/*" multiple>
-      Drop photos here or click to upload
+      <input type="file" id="fi-${id}" accept="image/*,video/*" multiple>
+      <span id="drop-label-${id}">Drop photos or videos here or click to upload${driveConnected?' · saved to Google Drive':''}</span>
     </div>
     <div class="gpx-drop" id="drop-gpx-${id}">
       <input type="file" id="fg-${id}" accept=".gpx">
@@ -381,11 +387,39 @@ function renderDetailTrackMap(entryId, tracks){
 
 async function uploadFiles(id,files){
   if(!files||!files.length) return;
-  const fd=new FormData();
-  [...files].forEach(f=>fd.append('photos',f));
-  const saved=await api.upload(`/api/entries/${id}/photos`,fd);
-  toast(`Uploaded ${saved.length} photo${saved.length!==1?'s':''}`);
+  files=[...files];
+  let saved=0;
+  if(driveConnected){
+    const label=document.getElementById(`drop-label-${id}`);
+    for(const [n,f] of files.entries()){
+      try{
+        await uploadToDrive(id,f,pct=>{if(label)label.textContent=`Uploading ${n+1} of ${files.length} — ${pct}%`;});
+        saved++;
+      }catch(err){toast(`${f.name}: ${err.message}`);}
+    }
+  }else{
+    const fd=new FormData();
+    files.forEach(f=>fd.append('photos',f));
+    saved=(await api.upload(`/api/entries/${id}/photos`,fd)).length;
+  }
+  toast(`Uploaded ${saved} file${saved!==1?'s':''}`);
   openEntry(id);
+}
+
+// The browser sends the file straight to Google Drive, so big videos never pass through the server
+async function uploadToDrive(id,file,onProgress){
+  const start=await api.post(`/api/entries/${id}/media/start`,{name:file.name,mime:file.type,size:file.size});
+  if(start.error) throw new Error(start.error);
+  const driveFile=await new Promise((resolve,reject)=>{
+    const x=new XMLHttpRequest();
+    x.open('PUT',start.upload_url);
+    x.upload.onprogress=ev=>{if(ev.lengthComputable)onProgress(Math.round(ev.loaded/ev.total*100));};
+    x.onload=()=>x.status<300?resolve(JSON.parse(x.responseText)):reject(new Error(`Drive upload failed (${x.status})`));
+    x.onerror=()=>reject(new Error('Network error during upload'));
+    x.send(file);
+  });
+  const done=await api.post(`/api/entries/${id}/media/finish`,{drive_id:driveFile.id});
+  if(done.error) throw new Error(done.error);
 }
 
 async function uploadGpx(id,file){
@@ -596,8 +630,17 @@ function wireDropArea(dropId,inputId,cb){
 let _t; function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_t);_t=setTimeout(()=>el.classList.remove('show'),2800);}
 
 // ── Lightbox ──────────────────────────────────────────────────────────────
-function openLB(url){document.getElementById('lb-img').src=url;document.getElementById('lightbox').classList.remove('hidden');}
-document.getElementById('lightbox').addEventListener('click',()=>document.getElementById('lightbox').classList.add('hidden'));
+function openLB(url,kind){
+  const img=document.getElementById('lb-img'),vid=document.getElementById('lb-vid');
+  img.hidden=kind==='video'; vid.hidden=kind!=='video';
+  if(kind==='video'){vid.src=url;vid.play();}else img.src=url;
+  document.getElementById('lightbox').classList.remove('hidden');
+}
+document.getElementById('lb-vid').addEventListener('click',ev=>ev.stopPropagation());
+document.getElementById('lightbox').addEventListener('click',()=>{
+  const vid=document.getElementById('lb-vid'); vid.pause(); vid.removeAttribute('src'); vid.load();
+  document.getElementById('lightbox').classList.add('hidden');
+});
 
 // ── Events ────────────────────────────────────────────────────────────────
 document.getElementById('btn-new').addEventListener('click',()=>{switchToListView();openNewForm();});
@@ -608,6 +651,10 @@ document.getElementById('filter-event').addEventListener('change',e=>{filterEven
 document.getElementById('filter-place').addEventListener('change',e=>{filterPlace=e.target.value;loadEntries();});
 document.getElementById('btn-clear').addEventListener('click',()=>{filterEvent='';filterPlace='';document.getElementById('filter-event').value='';document.getElementById('filter-place').value='';loadEntries();});
 
+api.get('/api/drive/status').then(s=>{driveConnected=s.connected;}).catch(()=>{});
+if(new URLSearchParams(location.search).get('drive')==='connected'){
+  history.replaceState(null,'','/'); setTimeout(()=>toast('Google Drive connected'),300);
+}
 loadEntries();
 </script>
 </body>
