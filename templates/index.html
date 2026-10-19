@@ -348,11 +348,19 @@ async function openEntry(id){
   }
 }
 
+// Esri dark gray canvas: no API key needed (CARTO now requires one)
+const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+function addBaseTiles(map){
+  const opts={maxZoom:19,maxNativeZoom:16};
+  L.tileLayer(ESRI+'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{...opts,attribution:'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'}).addTo(map);
+  L.tileLayer(ESRI+'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',opts).addTo(map);
+}
+
 function renderDetailTrackMap(entryId, tracks){
   const el=document.getElementById(`detail-track-map-${entryId}`);
   if(!el||detailTrackMap) return;
   const m=L.map(el,{zoomControl:true,attributionControl:false});
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(m);
+  addBaseTiles(m);
   detailTrackMap=m;
 
   const allPts=[];
@@ -468,7 +476,7 @@ function renderForm(e,isEdit){
         const iLat=parseFloat(document.getElementById('f-lat').value)||51;
         const iLng=parseFloat(document.getElementById('f-lng').value)||0;
         pickMap=L.map('pick-map').setView([iLat,iLng],e.lat?10:2);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(pickMap);
+        addBaseTiles(pickMap);
         if(e.lat&&e.lng) pickMarker=L.circleMarker([e.lat,e.lng],pinStyle()).addTo(pickMap);
         pickMap.on('click',ev=>{
           const{lat,lng}=ev.latlng;
@@ -511,7 +519,7 @@ async function saveEdit(id){
 function initWorldMap(){
   if(worldMap) return;
   worldMap=L.map('world-map').setView([30,10],2);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(worldMap);
+  addBaseTiles(worldMap);
 }
 function refreshWorldMap(){
   initWorldMap();
