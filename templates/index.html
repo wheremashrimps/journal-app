@@ -4,264 +4,9 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Folio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<meta name="theme-color" content="#1c1c1e"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  /* Apple dark system palette */
-  --bg:#000;--surface:#1c1c1e;--elevated:#2c2c2e;--elevated2:#3a3a3c;
-  --fill:rgba(118,118,128,.24);--fill2:rgba(118,118,128,.16);
-  --sep:rgba(84,84,88,.55);--sep-soft:rgba(84,84,88,.3);
-  --text:#fff;--text2:rgba(235,235,245,.62);--text3:rgba(235,235,245,.32);
-  --accent:#0a84ff;--accent-soft:rgba(10,132,255,.16);--red:#ff453a;--red-soft:rgba(255,69,58,.14);
-  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Helvetica Neue',sans-serif;
-  --font-display:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Helvetica Neue',sans-serif;
-  --blur:saturate(180%) blur(24px);
-  --ease:cubic-bezier(.25,.1,.25,1);
-}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;overflow:hidden;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
-.ico{width:1em;height:1em;flex:none;vertical-align:-.125em;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-::selection{background:var(--accent-soft)}
-
-/* ── Shell ── */
-.app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:56px 1fr;height:100vh}
-
-/* ── Header (frosted toolbar) ── */
-header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;background:rgba(28,28,30,.72);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:.5px solid var(--sep);z-index:500}
-.wordmark{font-family:var(--font-display);font-size:1.25rem;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
-.wordmark-badge{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,#5e5ce6,#0a84ff);display:flex;align-items:center;justify-content:center;font-size:.85rem;box-shadow:0 1px 3px rgba(0,0,0,.4),inset 0 .5px 0 rgba(255,255,255,.3)}
-.hdr-right{display:flex;align-items:center;gap:12px}
-.view-tabs{display:flex;background:var(--fill);border-radius:9px;padding:2px;position:relative}
-.view-tab{font:500 .8rem var(--font);padding:5px 16px;border-radius:7px;border:none;background:transparent;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s var(--ease);opacity:.85}
-.view-tab.active{background:#636366;opacity:1;box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
-.view-tab:hover:not(.active){opacity:1}
-
-/* ── Sidebar ── */
-aside{background:var(--surface);border-right:.5px solid var(--sep);display:flex;flex-direction:column;overflow:hidden}
-.sb-sec{padding:12px 14px 4px}
-.sb-sec:last-of-type{padding-bottom:12px;border-bottom:.5px solid var(--sep-soft)}
-.sb-lbl{font-size:.72rem;font-weight:600;color:var(--text3);margin:0 4px 6px;text-transform:none}
-input,textarea,select{font-family:var(--font);font-size:.9rem;color:var(--text)}
-.search-wrap{position:relative}
-.search-wrap .ico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:.95rem}
-input[type=search],input[type=text]{width:100%;background:var(--fill);border:none;color:var(--text);padding:8px 10px;border-radius:10px;outline:none;transition:box-shadow .2s}
-input[type=search]{padding-left:31px;-webkit-appearance:none}
-input[type=search]::-webkit-search-cancel-button{filter:invert(1) opacity(.5)}
-input[type=search]:focus,input[type=text]:focus{box-shadow:0 0 0 3.5px rgba(10,132,255,.45)}
-input::placeholder,textarea::placeholder{color:var(--text3)}
-input[type=date]{background:var(--fill);border:none;color:var(--accent);padding:7px 12px;border-radius:8px;outline:none;cursor:pointer;font-weight:500;color-scheme:dark}
-input[type=date]::-webkit-calendar-picker-indicator{filter:invert(42%) sepia(93%) saturate(3000%) hue-rotate(200deg);cursor:pointer}
-select{width:100%;appearance:none;-webkit-appearance:none;background:var(--fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23ebebf5' stroke-opacity='.6' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 11px center;border:none;color:var(--text);padding:8px 28px 8px 11px;border-radius:10px;outline:none;cursor:pointer;margin-bottom:8px}
-select:focus{box-shadow:0 0 0 3.5px rgba(10,132,255,.45)}
-textarea{width:100%;background:transparent;border:none;color:var(--text);outline:none;resize:none;font-family:var(--font)}
-.sort-pills{display:flex;background:var(--fill);border-radius:9px;padding:2px;margin-bottom:8px}
-.pill{flex:1;font:500 .78rem var(--font);padding:4px 6px;border-radius:7px;border:none;background:transparent;color:var(--text);cursor:pointer;transition:background .2s var(--ease);text-align:center}
-.pill.active{background:#636366;box-shadow:0 3px 8px rgba(0,0,0,.12)}
-.filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.filter-row select{margin-bottom:0}
-#btn-clear{background:none;border:none;color:var(--accent);font:400 .8rem var(--font);cursor:pointer;padding:8px 4px 2px}
-#btn-clear:hover{opacity:.75}
-.entry-list{flex:1;overflow-y:auto;padding:4px 10px 20px}
-.entry-list::-webkit-scrollbar{width:0}
-.grp-hdr{font-family:var(--font-display);font-size:.95rem;font-weight:700;color:var(--text);padding:16px 8px 6px;position:sticky;top:0;background:linear-gradient(var(--surface) 75%,transparent);z-index:1}
-.entry-item{padding:10px 12px;border-radius:10px;cursor:pointer;transition:background .15s var(--ease);position:relative;margin-bottom:1px}
-.entry-item+.entry-item::after{content:'';position:absolute;left:12px;right:12px;top:-1px;height:.5px;background:var(--sep-soft)}
-.entry-item:hover{background:var(--fill2)}
-.entry-item.active{background:var(--accent)}
-.entry-item.active::after,.entry-item.active+.entry-item::after{display:none}
-.ei-title{font-size:.93rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
-.ei-title span:first-child{overflow:hidden;text-overflow:ellipsis}
-.ei-badges{display:flex;gap:4px;color:var(--text3);font-size:.8rem;margin-left:auto}
-.ei-meta{font-size:.78rem;color:var(--text2);margin-top:2px;display:flex;gap:6px;white-space:nowrap;overflow:hidden}
-.ei-tag{overflow:hidden;text-overflow:ellipsis}
-.entry-item.active .ei-meta,.entry-item.active .ei-badges{color:rgba(255,255,255,.78)}
-.no-entries{padding:40px 15px;font-size:.85rem;color:var(--text3);text-align:center}
-
-/* ── Main ── */
-main{overflow:hidden;display:flex;flex-direction:column;position:relative;background:var(--bg)}
-.view{display:none;flex:1;overflow:hidden;flex-direction:column}
-.view.active{display:flex}
-.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);gap:14px;text-align:center}
-.empty-glyph{font-size:3.2rem;color:var(--elevated2)}
-.empty-state p{font-size:1rem;font-weight:500;color:var(--text2)}
-.empty-state small{font-size:.85rem;color:var(--text3);margin-top:-8px}
-
-/* ── Detail / Form scroll containers ── */
-.scroll-wrap{flex:1;overflow-y:auto;padding:44px 48px 80px;animation:rise .35s var(--ease)}
-@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.scroll-wrap::-webkit-scrollbar{width:8px}
-.scroll-wrap::-webkit-scrollbar-thumb{background:var(--elevated);border-radius:4px;border:2px solid var(--bg)}
-.scroll-wrap>*{max-width:720px;margin:0 auto}
-
-/* ── Detail ── */
-.detail-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px}
-.detail-date{font-size:.85rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
-.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:26px}
-.chip{font-size:.8rem;font-weight:500;padding:5px 11px;background:var(--fill2);border-radius:999px;color:var(--text2);display:inline-flex;align-items:center;gap:5px}
-.detail-actions{display:flex;gap:8px}
-.detail-title{font-family:var(--font-display);font-size:2.4rem;font-weight:700;letter-spacing:-.025em;line-height:1.1;margin-bottom:14px}
-.detail-body{font-size:1.06rem;line-height:1.6;color:rgba(255,255,255,.86);white-space:pre-wrap;letter-spacing:-.005em}
-.section-title{font-family:var(--font-display);font-size:1.2rem;font-weight:700;margin:36px 0 12px;display:flex;align-items:baseline;justify-content:space-between}
-.section-title span{font:400 .85rem var(--font);color:var(--text2)}
-
-/* ── Track map in detail ── */
-.track-map-wrap{margin-top:0}
-.track-map-label{display:none}
-.track-map{height:280px;border-radius:14px;overflow:hidden}
-.track-list{margin-top:10px;background:var(--surface);border-radius:12px;overflow:hidden}
-.track-item{display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:.9rem}
-.track-item+.track-item{border-top:.5px solid var(--sep-soft)}
-.track-item-name{flex:1;display:flex;align-items:center;gap:8px}
-.track-item-name .ico{color:var(--accent)}
-.track-item-dist{color:var(--text2)}
-
-/* ── Photos ── */
-.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;border-radius:14px;overflow:hidden}
-.photo-grid:empty{display:none}
-.photo-thumb{position:relative;aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--surface)}
-.photo-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .5s var(--ease),filter .3s;display:block}
-.photo-thumb:hover img{transform:scale(1.04)}
-.photo-thumb video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-.photo-play{position:absolute;left:8px;bottom:8px;width:28px;height:28px;border-radius:50%;background:rgba(30,30,30,.55);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;pointer-events:none}
-.photo-del{position:absolute;top:7px;right:7px;background:rgba(30,30,30,.6);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:none;color:#fff;width:26px;height:26px;border-radius:50%;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.85);transition:all .2s var(--ease)}
-.photo-thumb:hover .photo-del{opacity:1;transform:none}
-.upload-row{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:12px}
-.drop-area,.gpx-drop{border-radius:12px;padding:16px 14px;text-align:center;font-size:.85rem;font-weight:500;color:var(--accent);background:var(--surface);cursor:pointer;transition:background .2s var(--ease);display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed transparent}
-.drop-area:hover,.gpx-drop:hover{background:var(--elevated)}
-.drop-area.drag-over,.gpx-drop.drag-over{border-color:var(--accent);background:var(--accent-soft)}
-.drop-area input,.gpx-drop input{display:none}
-.drop-area .ico,.gpx-drop .ico{font-size:1.1rem}
-
-/* ── Form (inset grouped, like iOS Settings) ── */
-.form-title{font-family:var(--font-display);font-size:2rem;font-weight:700;letter-spacing:-.02em;margin-bottom:22px}
-.group{background:var(--surface);border-radius:12px;margin-bottom:22px;overflow:hidden}
-.group-row{display:flex;align-items:center;gap:12px;padding:0 16px;min-height:46px}
-.group-row+.group-row{border-top:.5px solid var(--sep-soft)}
-.group-row>label{font-size:.95rem;width:96px;flex:none;color:var(--text)}
-.f-lbl{font-size:.75rem;font-weight:400;color:var(--text2);display:block;margin:0 16px 7px;text-transform:uppercase;letter-spacing:.02em}
-.f-field{width:100%;background:transparent;border:none;color:var(--text);font-family:var(--font);padding:12px 0;outline:none;font-size:.95rem;border-radius:0}
-.f-field:focus{box-shadow:none}
-input.f-field[type=text],input.f-field:not([type]){background:transparent;padding:12px 0;box-shadow:none!important}
-.f-title{font-family:var(--font-display);font-size:1.35rem;font-weight:600;padding:14px 0}
-.f-body{min-height:220px;line-height:1.55;padding:14px 0;display:block;font-size:1rem}
-.group-row.tall{align-items:stretch}
-.f-row{display:contents}
-.f-date-wrap{display:contents}
-.f-actions{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;align-items:center}
-.hint{font-size:.78rem;color:var(--text3);margin:-14px 16px 22px}
-
-/* location picker */
-.loc-row{display:flex;align-items:center;gap:12px;padding:0 16px;min-height:46px}
-.loc-coords{flex:1;font-size:.9rem;color:var(--text2);font-variant-numeric:tabular-nums}
-#pick-map{height:240px;display:none}
-#pick-map.visible{display:block;border-top:.5px solid var(--sep-soft)}
-
-/* ── World map ── */
-#view-map{position:relative}
-#world-map{width:100%;height:100%}
-.map-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text2);gap:10px;pointer-events:none}
-.map-empty p{font-size:.95rem;font-weight:500;background:rgba(28,28,30,.7);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);padding:10px 18px;border-radius:999px}
-.map-empty .empty-glyph{display:none}
-
-/* ── Buttons ── */
-.btn{font:500 .88rem var(--font);padding:8px 16px;border-radius:999px;border:none;background:var(--fill);color:var(--accent);cursor:pointer;transition:all .15s var(--ease);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-.btn:hover{background:rgba(118,118,128,.32)}
-.btn:active{transform:scale(.97)}
-.btn-gold{background:var(--accent);color:#fff}
-.btn-gold:hover{background:#409cff}
-.btn-danger{background:var(--red-soft);color:var(--red)}
-.btn-danger:hover{background:rgba(255,69,58,.24)}
-.btn-sm{padding:6px 13px;font-size:.82rem}
-.btn-icon{width:34px;height:34px;padding:0;justify-content:center;font-size:1rem}
-.btn-plain{background:none;padding:6px 4px}
-.btn-plain:hover{background:none;opacity:.75}
-#btn-new{width:34px;height:34px;padding:0;justify-content:center;font-size:1.1rem}
-
-/* ── Lightbox ── */
-.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out;animation:fade .25s var(--ease)}
-@keyframes fade{from{opacity:0}to{opacity:1}}
-.lightbox.hidden{display:none}
-.lightbox img,.lightbox video{max-width:92vw;max-height:90vh;object-fit:contain;border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,.6);animation:zoomin .3s var(--ease)}
-@keyframes zoomin{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
-.lightbox video{cursor:auto}
-
-/* ── Toast (HUD) ── */
-.toast{position:fixed;bottom:28px;left:50%;background:rgba(44,44,46,.82);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);color:var(--text);font-size:.88rem;font-weight:500;padding:11px 20px;border-radius:999px;z-index:9998;opacity:0;transform:translate(-50%,10px) scale(.96);transition:all .3s var(--ease);pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.4)}
-.toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
-
-/* Leaflet */
-.leaflet-container{background:#191a1a;font-family:var(--font)}
-.leaflet-bar{border:none!important;border-radius:10px!important;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.4)!important}
-.leaflet-bar a{background:rgba(44,44,46,.85)!important;color:#fff!important;border-bottom-color:var(--sep)!important;backdrop-filter:var(--blur)}
-.leaflet-control-attribution{background:rgba(0,0,0,.45)!important;color:var(--text3)!important;font-size:10px}
-.leaflet-control-attribution a{color:var(--text2)!important}
-.leaflet-popup-content-wrapper{background:rgba(44,44,46,.88);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);color:var(--text)}
-.leaflet-popup-content{margin:12px 16px}
-.leaflet-popup-tip{background:rgba(44,44,46,.88)}
-.leaflet-popup-close-button{color:var(--text2)!important}
-.map-popup-title{font-size:.98rem;font-weight:600;color:#fff;margin-bottom:2px}
-.map-popup-meta{font-size:.78rem;color:var(--text2);margin-bottom:6px}
-.map-popup-dist{font-size:.78rem;color:var(--text2)}
-.map-popup-link{font-size:.82rem;font-weight:500;color:var(--accent);cursor:pointer;margin-top:6px;display:inline-block}
-
-/* ── Phone: list full screen, detail pushes in from the right ── */
-.hdr-left{display:flex;align-items:center;min-width:0}
-.back-btn{display:none;align-items:center;gap:1px;background:none;border:none;color:var(--accent);font:400 1.05rem var(--font);cursor:pointer;padding:6px 6px 6px 0;margin-left:-6px;letter-spacing:-.02em}
-.back-btn .ico{font-size:1.45rem;stroke-width:2.2}
-.back-btn:active{opacity:.5}
-@media (max-width:760px){
-  .app{grid-template-columns:1fr;grid-template-rows:calc(52px + env(safe-area-inset-top)) 1fr;height:100dvh;overflow:hidden}
-  header{padding:env(safe-area-inset-top) max(12px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
-  .wordmark{font-size:1.15rem;gap:8px}
-  .wordmark-badge{width:24px;height:24px}
-  .hdr-right{gap:10px}
-  .view-tab{padding:5px 12px;gap:5px}
-  .app.detail-open:not(.map-mode) .wordmark{display:none}
-  .app.detail-open:not(.map-mode) .back-btn{display:flex}
-
-  aside,main{grid-row:2;grid-column:1;min-height:0}
-  aside{border-right:none;background:var(--bg);transition:transform .42s var(--ease),filter .42s var(--ease)}
-  main{z-index:2;transform:translateX(100%);transition:transform .42s var(--ease),box-shadow .42s var(--ease)}
-  .app.detail-open main{transform:none;box-shadow:-12px 0 32px rgba(0,0,0,.55)}
-  .app.detail-open aside{transform:translateX(-28%);filter:brightness(.55)}
-  .app.map-mode main{transform:none;box-shadow:none}
-  .app.no-anim main,.app.no-anim aside{transition:none}
-
-  /* list */
-  .sb-sec{padding:10px 16px 4px}
-  .sb-sec:last-of-type{padding-bottom:10px}
-  .grp-hdr{font-size:1.15rem;padding:18px 8px 6px;background:linear-gradient(var(--bg) 75%,transparent)}
-  .entry-list{padding:0 8px calc(24px + env(safe-area-inset-bottom))}
-  .entry-item{padding:12px 12px}
-  .ei-title{font-size:1rem}
-  .ei-meta{font-size:.84rem;margin-top:3px}
-  /* 16px stops iOS Safari zooming into focused fields */
-  input,textarea,select,input[type=date]{font-size:16px}
-  .f-title{font-size:1.3rem}
-
-  /* detail + form */
-  .scroll-wrap{padding:18px 18px calc(56px + env(safe-area-inset-bottom));animation:none}
-  .detail-top{flex-wrap:wrap}
-  .detail-date{font-size:.78rem}
-  .detail-title{font-size:1.9rem;margin-bottom:12px}
-  .chips{margin-bottom:22px}
-  .detail-body{font-size:1.04rem}
-  .section-title{margin-top:30px}
-  .photo-grid{grid-template-columns:repeat(3,1fr);gap:3px;border-radius:12px}
-  .upload-row{grid-template-columns:1fr 1fr}
-  .drop-area,.gpx-drop{padding:14px 10px;font-size:.82rem}
-  .track-map{height:230px}
-  .form-title{font-size:1.75rem;margin-bottom:18px}
-  .group-row>label{width:70px}
-  .toast{bottom:calc(24px + env(safe-area-inset-bottom))}
-}
-@media (hover:none){.photo-del{opacity:1;transform:none}}
-</style>
+{% include '_head.html' %}
 </head>
 <body>
 <div class="app">
@@ -312,51 +57,41 @@ input.f-field[type=text],input.f-field:not([type]){background:transparent;paddin
 </div>
 
 <div class="lightbox hidden" id="lightbox"><img id="lb-img" src="" alt=""><video id="lb-vid" controls playsinline hidden></video></div>
+<div class="sheet hidden" id="sheet" onclick="if(event.target===this)closeSheet()"><div class="sheet-card"></div></div>
 <div class="toast" id="toast"></div>
 
+<script src="/static/common.js?v={{ asset_v }}"></script>
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
 let entries=[], activeId=null, sort='date', filterEvent='', filterPlace='', searchQ='';
 let worldMap=null, worldLayers=[], pickMap=null, pickMarker=null;
 let currentView='list';
-let detailTrackMap=null;
+let homeShown=true, allEntries=[];
+const LOCKED={{ 'true' if locked else 'false' }};
 let driveConnected=false;
 
 // ── Icons ───────────────────────────────────────────────────────────────
-const ICONS={
-  list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".6"/><circle cx="3.5" cy="12" r=".6"/><circle cx="3.5" cy="18" r=".6"/>',
-  map:'<path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5V4l-6 2.5L9 4z"/><path d="M9 4v13M15 6.5v13"/>',
-  plus:'<path d="M12 5v14M5 12h14"/>',
-  search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
-  pin:'<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
-  tag:'<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.2 6.2a1.4 1.4 0 0 1-2 0z"/><circle cx="8" cy="8" r="1.3"/>',
-  route:'<circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8.2 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.8"/>',
-  pencil:'<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/>',
-  trash:'<path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13"/>',
-  photo:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 8"/>',
-  play:'<path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="none"/>',
-  chevL:'<path d="m14.5 5.5-6.5 6.5 6.5 6.5"/>',
-  xmark:'<path d="M6 6l12 12M18 6 6 18"/>',
-  book:'<path d="M5 4.5h9.5a2.5 2.5 0 0 1 2.5 2.5v12.5H7.5A2.5 2.5 0 0 1 5 17V4.5z"/><path d="M5 17a2.5 2.5 0 0 1 2.5-2.5H17"/>',
-};
-function ico(n){return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;}
 document.querySelectorAll('[data-ico]').forEach(el=>el.insertAdjacentHTML('afterbegin',ico(el.dataset.ico)));
 document.getElementById('wm-badge').innerHTML=ico('book');
 
 // ── API ────────────────────────────────────────────────────────────────────
+// A 401 means the passcode session ended (or was never started): go back to the lock screen
+const json=r=>{if(r.status===401){location.href='/login';return new Promise(()=>{});}return r.json();};
 const api={
-  get:    u      =>fetch(u).then(r=>r.json()),
-  post:   (u,d)  =>fetch(u,{method:'POST',  headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(r=>r.json()),
-  put:    (u,d)  =>fetch(u,{method:'PUT',   headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(r=>r.json()),
-  del:    u      =>fetch(u,{method:'DELETE'}).then(r=>r.json()),
-  upload: (u,fd) =>fetch(u,{method:'POST',  body:fd}).then(r=>r.json()),
+  get:    u      =>fetch(u).then(json),
+  post:   (u,d)  =>fetch(u,{method:'POST',  headers:{'Content-Type':'application/json'},body:JSON.stringify(d||{})}).then(json),
+  put:    (u,d)  =>fetch(u,{method:'PUT',   headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(json),
+  del:    u      =>fetch(u,{method:'DELETE'}).then(json),
+  upload: (u,fd) =>fetch(u,{method:'POST',  body:fd}).then(json),
 };
 
 // ── Load ───────────────────────────────────────────────────────────────────
 async function loadEntries(){
   const p=new URLSearchParams({sort,event:filterEvent,place:filterPlace,search:searchQ});
   entries=await api.get(`/api/entries?${p}`);
+  allEntries=(filterEvent||filterPlace||searchQ)?await api.get('/api/entries'):entries;
   renderSidebar(); await loadMeta();
+  if(homeShown&&!detailOpen()&&!phone.matches) showHome();
   if(currentView==='map') refreshWorldMap();
 }
 async function loadMeta(){
@@ -370,8 +105,10 @@ async function loadMeta(){
 // ── Sidebar ────────────────────────────────────────────────────────────────
 function renderSidebar(){
   const list=document.getElementById('entry-list');
-  if(!entries.length){list.innerHTML='<div class="no-entries">No entries found</div>';return;}
-  let html='', lastGroup=null;
+  let html=`<div class="entry-item hl-item${homeShown?' active':''}" id="hl-item">
+    <span class="hl-icon">${ico('sparkle')}</span><div><div class="ei-title"><span>Highlights</span></div>
+    <div class="ei-meta"><span>On this day, trips &amp; your year</span></div></div></div>`, lastGroup=null;
+  if(!entries.length) html+='<div class="no-entries">No entries found</div>';
   entries.forEach(e=>{
     const group=sort==='event'?(e.event||'—'):sort==='place'?(e.place||'—'):(e.entry_date||'—').slice(0,7);
     if(group!==lastGroup){html+=`<div class="grp-hdr">${sort==='date'?fmtMonth(group):group}</div>`;lastGroup=group;}
@@ -383,47 +120,52 @@ function renderSidebar(){
     </div>`;
   });
   list.innerHTML=html;
-  list.querySelectorAll('.entry-item').forEach(el=>el.addEventListener('click',()=>{switchToListView();openEntry(el.dataset.id);}));
+  list.querySelectorAll('.entry-item[data-id]').forEach(el=>el.addEventListener('click',()=>{switchToListView();openEntry(el.dataset.id);}));
+  document.getElementById('hl-item').addEventListener('click',()=>{switchToListView();showHome(true);});
 }
 
 // ── Detail ─────────────────────────────────────────────────────────────────
 async function openEntry(id){
-  activeId=id; detailTrackMap=null;
+  activeId=id; homeShown=false;
   renderSidebar();
   const e=await api.get(`/api/entries/${id}`);
+  if(activeId!==id) return;   // the user clicked something else while this loaded
 
   const chips=[
     e.place?`<span class="chip">${ico('pin')}${esc(e.place)}</span>`:'',
-    e.event?`<span class="chip">${ico('tag')}${esc(e.event)}</span>`:'',
-    (e.tracks&&e.tracks.length)?`<span class="chip">${ico('route')}${e.tracks.length} track${e.tracks.length>1?'s':''}</span>`:'',
+    e.event?`<button class="chip chip-link" data-trip="${esc(e.event)}" onclick="openTrip(this.dataset.trip)">${ico('tag')}${esc(e.event)}${ico('chevR')}</button>`:'',
+    weatherChip(e.weather),
+    (e.tracks&&e.tracks.length)?`<span class="chip">${ico('route')}${e.tracks.map(t=>t.distance_km?t.distance_km+' km':'').filter(Boolean).join(' + ')||e.tracks.length+' route'}</span>`:'',
     (e.lat&&e.lng&&!(e.tracks&&e.tracks.length)&&!e.place)?`<span class="chip">${ico('pin')}Pinned</span>`:'',
   ].filter(Boolean).join('');
 
   const photos=e.photos.map(p=>`
     <div class="photo-thumb" onclick="openLB('${p.url}','${p.kind}')">
-      ${p.kind==='video'
-        ?`<video src="${p.url}#t=0.1" preload="metadata" muted playsinline></video><span class="photo-play">${ico('play')}</span>`
-        :`<img src="${p.url}" alt="${esc(p.original_name||'')}" loading="lazy">`}
-      <button class="photo-del" title="Delete" onclick="delPhoto('${p.id}','${id}',event)">${ico('xmark')}</button>
+      ${photoTile(p,`<button class="photo-del" title="Delete" onclick="delPhoto('${p.id}','${id}',event)">${ico('xmark')}</button>`)}
     </div>`).join('');
 
-  // Track section
+  // Photos taken on another day than the entry's date? Offer to fix the date.
+  let dateHint='';
+  const taken=[...new Set(e.photos.map(p=>p.taken_at&&p.taken_at.slice(0,10)).filter(Boolean))];
+  if(taken.length===1&&taken[0]!==e.entry_date&&!dismissedHint(id,taken[0])){
+    dateHint=`<div class="hint-card">${ico('calendar')}<div>These photos were taken on <b>${fmtLongDate(taken[0])}</b>.</div>
+      <button class="btn btn-sm" onclick="useDate('${id}','${taken[0]}')">Use this date</button>
+      <button class="btn btn-sm btn-plain" title="Dismiss" onclick="dismissHint('${id}','${taken[0]}')">${ico('xmark')}</button></div>`;
+  }
+
   let trackSection='';
   if(e.tracks&&e.tracks.length){
     const trackItems=e.tracks.map(t=>`
       <div class="track-item" id="ti-${t.id}">
         <span class="track-item-name">${ico('route')}${esc(t.track_name||t.original_name||'Track')}</span>
-        <span class="track-item-dist">${t.distance_km?t.distance_km+' km':''}</span>
+        <span class="track-item-dist">${t.distance_km?t.distance_km+' km':''}${t.ascent_m?` · ↑ ${fmtNum(t.ascent_m)} m`:''}</span>
         <button class="btn btn-plain btn-sm" style="color:var(--red)" title="Remove track" onclick="delTrack('${t.id}','${id}',event)">${ico('trash')}</button>
       </div>`).join('');
     trackSection=`
       <div class="section-title">Route<span>${e.tracks.map(t=>t.distance_km?t.distance_km+' km':'').filter(Boolean).join(' + ')}</span></div>
       <div class="track-map-wrap">
-        <div class="track-map-label">
-          GPS Tracks
-          <span>${e.tracks.map(t=>t.distance_km?t.distance_km+' km':'').filter(Boolean).join(' + ')}</span>
-        </div>
         <div class="track-map" id="detail-track-map-${id}"></div>
+        <div class="elev" id="elev-${id}"></div>
         <div class="track-list">${trackItems}</div>
       </div>`;
   }
@@ -432,14 +174,16 @@ async function openEntry(id){
     <div class="detail-top">
       <div class="detail-date">${fmtLongDate(e.entry_date)}</div>
       <div class="detail-actions">
+        <button class="btn btn-icon${e.shared?' btn-on':''}" title="Share" onclick="openShare('${id}')">${ico('share')}</button>
         <button class="btn btn-sm" onclick="openEditForm('${id}')">${ico('pencil')}Edit</button>
         <button class="btn btn-icon btn-danger" title="Delete entry" onclick="delEntry('${id}')">${ico('trash')}</button>
       </div>
     </div>
     <div class="detail-title">${esc(e.title)}</div>
-    ${chips?`<div class="chips">${chips}</div>`:'<div style="height:12px"></div>'}
+    ${chips?`<div class="chips" id="chips-${id}">${chips}</div>`:`<div class="chips" id="chips-${id}"></div>`}
     <div class="detail-body">${esc(e.body||'')}</div>
     <div class="section-title">Photos &amp; Videos<span>${e.photos.length||''}</span></div>
+    ${dateHint}
     <div class="photo-grid" id="pg-${id}">${photos}</div>
     <div class="upload-row">
     <div class="drop-area" id="drop-img-${id}">
@@ -455,53 +199,51 @@ async function openEntry(id){
   </div></div>`);
 
   openDetail();
-  // Wire photo upload
   wireDropArea(`drop-img-${id}`, `fi-${id}`, files=>uploadFiles(id,files));
-  // Wire GPX upload
-  const gpxDrop=document.getElementById(`drop-gpx-${id}`);
-  const gpxInput=document.getElementById(`fg-${id}`);
-  gpxDrop.addEventListener('click',()=>gpxInput.click());
-  gpxDrop.addEventListener('dragover',ev=>{ev.preventDefault();gpxDrop.classList.add('drag-over');});
-  gpxDrop.addEventListener('dragleave',()=>gpxDrop.classList.remove('drag-over'));
-  gpxDrop.addEventListener('drop',async ev=>{ev.preventDefault();gpxDrop.classList.remove('drag-over');await uploadGpx(id,ev.dataTransfer.files[0]);});
-  gpxInput.addEventListener('change',async()=>await uploadGpx(id,gpxInput.files[0]));
+  wireDropArea(`drop-gpx-${id}`, `fg-${id}`, files=>uploadGpx(id,files[0]));
 
-  // Render track map
   if(e.tracks&&e.tracks.length){
-    setTimeout(()=>renderDetailTrackMap(id,e.tracks),80);
+    setTimeout(()=>renderRoute(document.getElementById(`detail-track-map-${id}`),e.tracks,document.getElementById(`elev-${id}`)),80);
+  }
+  // Older entries get their weather looked up the first time they're opened
+  if(e.weather===null&&e.lat&&e.lng){
+    api.post(`/api/entries/${id}/weather`).then(w=>{
+      const c=document.getElementById(`chips-${id}`);
+      if(c&&w&&w.code!=null) c.insertAdjacentHTML('beforeend',weatherChip(w));
+    });
   }
 }
 
-// Esri dark gray canvas: no API key needed (CARTO now requires one)
-const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
-function addBaseTiles(map){
-  const opts={maxZoom:19,maxNativeZoom:16};
-  L.tileLayer(ESRI+'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{...opts,attribution:'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'}).addTo(map);
-  L.tileLayer(ESRI+'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',opts).addTo(map);
-}
+function dismissedHint(id,d){try{return localStorage.getItem(`folio-hint-${id}`)===d;}catch{return false;}}
+function dismissHint(id,d){try{localStorage.setItem(`folio-hint-${id}`,d);}catch{} openEntry(id);}
+async function useDate(id,d){await api.put(`/api/entries/${id}`,{entry_date:d});toast('Date updated');await loadEntries();openEntry(id);}
 
-function renderDetailTrackMap(entryId, tracks){
-  const el=document.getElementById(`detail-track-map-${entryId}`);
-  if(!el||detailTrackMap) return;
-  const m=L.map(el,{zoomControl:true,attributionControl:false});
-  addBaseTiles(m);
-  detailTrackMap=m;
-
-  const allPts=[];
-  tracks.forEach((t,i)=>{
-    if(!t.points||!t.points.length) return;
-    const color=i===0?'#0a84ff':'#64d2ff';
-    L.polyline(t.points,{color,weight:4,opacity:.95,lineCap:'round',lineJoin:'round'}).addTo(m);
-    // start/end markers
-    const s=t.points[0], e=t.points[t.points.length-1];
-    L.circleMarker(s,{radius:5,fillColor:'#30d158',color:'#fff',weight:2,fillOpacity:1}).addTo(m)
-      .bindTooltip('Start',{permanent:false});
-    L.circleMarker(e,{radius:5,fillColor:'#ff453a',color:'#fff',weight:2,fillOpacity:1}).addTo(m)
-      .bindTooltip('End',{permanent:false});
-    t.points.forEach(p=>allPts.push(p));
-  });
-  if(allPts.length) m.fitBounds(L.latLngBounds(allPts),{padding:[20,20]});
+// ── Sharing ──────────────────────────────────────────────────────────────────
+async function openShare(id){
+  const e=await api.get(`/api/entries/${id}`);
+  const link=e.shared?(await api.post(`/api/entries/${id}/share`)).url:null;
+  showSheet(`
+    <div class="sheet-title">${ico('share')}Share “${esc(e.title)}”</div>
+    ${link?`
+      <p class="sheet-text">Anyone with this link can view this entry, but can't see the rest of your journal or change anything.</p>
+      <div class="share-link"><input type="text" readonly value="${esc(link)}" onclick="this.select()"><button class="btn btn-sm" data-url="${esc(link)}" onclick="copyLink(this.dataset.url)">${ico('copy')}Copy</button></div>
+      <div class="sheet-actions">
+        ${navigator.share?`<button class="btn btn-gold" data-title="${esc(e.title)}" data-url="${esc(link)}" onclick="navigator.share({title:this.dataset.title,url:this.dataset.url}).catch(()=>{})">${ico('share')}Send…</button>`:''}
+        <button class="btn btn-danger" onclick="stopSharing('${id}')">Stop sharing</button>
+      </div>`:`
+      <p class="sheet-text">Create a private link to this one entry. People with the link can view it without the passcode, but can't see anything else or make changes. You can switch the link off at any time.</p>
+      <div class="sheet-actions"><button class="btn btn-gold" onclick="startSharing('${id}')">Create link</button><button class="btn" onclick="closeSheet()">Cancel</button></div>`}
+  `);
 }
+async function startSharing(id){await api.post(`/api/entries/${id}/share`);openShare(id);openEntry(id);}
+async function stopSharing(id){await api.del(`/api/entries/${id}/share`);closeSheet();toast('Link switched off');openEntry(id);}
+function copyLink(url){navigator.clipboard.writeText(url).then(()=>toast('Link copied'),()=>toast('Couldn’t copy — select the link instead'));}
+function showSheet(html){
+  const s=document.getElementById('sheet');
+  s.querySelector('.sheet-card').innerHTML=html;
+  s.classList.remove('hidden');
+}
+function closeSheet(){document.getElementById('sheet').classList.add('hidden');}
 
 async function uploadFiles(id,files){
   if(!files||!files.length) return;
@@ -560,20 +302,19 @@ async function delPhoto(pid,eid,ev){
 async function delTrack(tid,eid,ev){
   ev.stopPropagation();
   if(!confirm('Remove this track?')) return;
-  detailTrackMap=null;
   await api.del(`/api/tracks/${tid}`); toast('Track removed');
   await loadEntries(); openEntry(eid);
 }
 
 async function delEntry(id){
   if(!confirm('Delete this entry and all its photos and tracks?')) return;
-  await api.del(`/api/entries/${id}`); activeId=null; detailTrackMap=null;
+  await api.del(`/api/entries/${id}`); activeId=null;
   toast('Entry deleted'); await loadEntries(); showEmpty();
 }
 
 // ── Forms ─────────────────────────────────────────────────────────────────
-function openNewForm(){activeId=null;renderSidebar();renderForm({title:'',body:'',event:'',place:'',entry_date:today(),lat:null,lng:null},false);}
-async function openEditForm(id){activeId=id;renderSidebar();const e=await api.get(`/api/entries/${id}`);renderForm(e,true);}
+function openNewForm(){activeId=null;homeShown=false;renderSidebar();renderForm({title:'',body:'',event:'',place:'',entry_date:today(),lat:null,lng:null},false);}
+async function openEditForm(id){activeId=id;homeShown=false;renderSidebar();const e=await api.get(`/api/entries/${id}`);renderForm(e,true);}
 
 function renderForm(e,isEdit){
   setListContent(`<div class="scroll-wrap"><form onsubmit="return false">
@@ -581,7 +322,8 @@ function renderForm(e,isEdit){
 
     <div class="group">
       <div class="group-row"><input class="f-field f-title" id="f-title" placeholder="Title" value="${esc(e.title)}"></div>
-      <div class="group-row tall"><textarea class="f-field f-body" id="f-body" placeholder="Write your thoughts…">${esc(e.body||'')}</textarea></div>
+      <div class="group-row tall"><textarea class="f-field f-body" id="f-body" placeholder="Write your thoughts…">${esc(e.body||'')}</textarea>
+        ${SpeechRec?`<button type="button" class="mic-btn" id="btn-mic" title="Dictate" onclick="toggleDictation()">${ico('mic')}</button>`:''}</div>
     </div>
 
     <label class="f-lbl">Details</label>
@@ -639,6 +381,27 @@ function renderForm(e,isEdit){
   },60);
 }
 
+// ── Dictation (Web Speech API: Safari and Chrome) ────────────────────────────
+const SpeechRec=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null;
+function toggleDictation(){
+  if(rec){rec.stop();return;}
+  const ta=document.getElementById('f-body'), btn=document.getElementById('btn-mic');
+  rec=new SpeechRec(); rec.lang=navigator.language||'en-GB'; rec.continuous=true; rec.interimResults=true;
+  let base=ta.value&&!/\s$/.test(ta.value)?ta.value+' ':ta.value;
+  rec.onresult=ev=>{
+    let interim='';
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const t=ev.results[i][0].transcript;
+      if(ev.results[i].isFinal){base+=t.trim()+' ';}else interim+=t;
+    }
+    ta.value=base+interim;
+  };
+  rec.onerror=ev=>{if(ev.error==='not-allowed')toast('Microphone access was blocked');};
+  rec.onend=()=>{rec=null;btn&&btn.classList.remove('rec');ta.value=ta.value.replace(/\s+$/,'');};
+  rec.start(); btn.classList.add('rec'); toast('Listening… tap the mic again to stop');
+}
+
 function getFd(){
   return{
     title:     document.getElementById('f-title').value.trim(),
@@ -651,12 +414,14 @@ function getFd(){
   };
 }
 async function saveNew(){
+  if(rec) rec.stop();
   const d=getFd(); if(!d.title){toast('Please add a title');return;}
   pickMap=null;pickMarker=null;
   const entry=await api.post('/api/entries',d); toast('Entry created');
   await loadEntries(); openEntry(entry.id);
 }
 async function saveEdit(id){
+  if(rec) rec.stop();
   const d=getFd(); if(!d.title){toast('Please add a title');return;}
   pickMap=null;pickMarker=null;
   await api.put(`/api/entries/${id}`,d); toast('Saved');
@@ -691,13 +456,15 @@ function refreshWorldMap(){
         worldLayers.push(line);
       });
       // start pin
-      const s=e.tracks[0].points[0];
+      const s=e.tracks[0].points[0], cover=firstImage([e]);
       if(s){
-        const m=L.circleMarker(s,pinStyle(6)).addTo(worldMap);
+        const m=(cover?L.marker(s,{icon:photoPin(cover.thumb_url)}):L.circleMarker(s,pinStyle(6))).addTo(worldMap);
+        m.on('click',()=>viewFromMap(e.id));
         worldLayers.push(m);
       }
     } else if(e.lat&&e.lng){
-      const m=L.circleMarker([e.lat,e.lng],pinStyle(8)).addTo(worldMap);
+      const cover=firstImage([e]);
+      const m=(cover?L.marker([e.lat,e.lng],{icon:photoPin(cover.thumb_url)}):L.circleMarker([e.lat,e.lng],pinStyle(8))).addTo(worldMap);
       const tags=[e.place,e.event].filter(Boolean).map(esc).join(' · ');
       m.bindPopup(`
         <div class="map-popup-title">${esc(e.title)}</div>
@@ -709,6 +476,173 @@ function refreshWorldMap(){
 }
 
 function viewFromMap(id){switchToListView();openEntry(id);}
+
+// ── Highlights: On This Day, trips, year in review ───────────────────────────
+const firstImage=list=>{for(const e of list)for(const p of e.photos||[])if(p.kind==='image')return p;return null;};
+const entryKm=e=>(e.tracks||[]).reduce((s,t)=>s+(t.distance_km||0),0);
+const entryAscent=e=>(e.tracks||[]).reduce((s,t)=>s+(t.ascent_m||0),0);
+const daysBetween=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
+function yearsAgo(d){const n=new Date().getFullYear()-Number(d.slice(0,4));return n===1?'1 year ago':`${n} years ago`;}
+
+function onThisDay(){
+  const now=new Date(), md=today().slice(5), y=now.getFullYear();
+  const exact=allEntries.filter(e=>e.entry_date.slice(5)===md&&Number(e.entry_date.slice(0,4))<y);
+  if(exact.length) return {title:'On This Day',list:exact};
+  // nothing on the exact day: widen to this week in earlier years
+  const week=allEntries.filter(e=>{
+    const ey=Number(e.entry_date.slice(0,4)); if(ey>=y) return false;
+    const same=new Date(y,Number(e.entry_date.slice(5,7))-1,Number(e.entry_date.slice(8,10)));
+    return Math.abs(same-new Date(y,now.getMonth(),now.getDate()))<=3*864e5;
+  });
+  return week.length?{title:'This Week in Past Years',list:week}:null;
+}
+function trips(){
+  const by={};
+  allEntries.forEach(e=>{if(e.event)(by[e.event]=by[e.event]||[]).push(e);});
+  return Object.entries(by).map(([name,list])=>{
+    list.sort((a,b)=>a.entry_date.localeCompare(b.entry_date));
+    return {name,list,start:list[0].entry_date,end:list[list.length-1].entry_date,cover:firstImage(list)};
+  }).sort((a,b)=>b.end.localeCompare(a.end));
+}
+function statTiles(list){
+  const photos=list.reduce((s,e)=>s+(e.photos||[]).length,0);
+  const places=new Set(list.map(e=>e.place).filter(Boolean)).size;
+  const km=list.reduce((s,e)=>s+entryKm(e),0), up=list.reduce((s,e)=>s+entryAscent(e),0);
+  return `<div class="stat-grid">
+    <div class="stat"><b>${list.length}</b><span>${list.length===1?'Entry':'Entries'}</span></div>
+    <div class="stat"><b>${photos}</b><span>Photos &amp; videos</span></div>
+    <div class="stat"><b>${places}</b><span>${places===1?'Place':'Places'}</span></div>
+    ${km?`<div class="stat"><b>${fmtNum(km,1)}<small> km</small></b><span>On the move</span></div>`:''}
+    ${up?`<div class="stat"><b>${fmtNum(up)}<small> m</small></b><span>Climbed</span></div>`:''}
+  </div>`;
+}
+function mosaic(list,max=10){
+  const ps=[];list.forEach(e=>(e.photos||[]).forEach(p=>ps.push(p)));
+  if(!ps.length) return '';
+  return `<div class="mosaic">${ps.slice(0,max).map(p=>`<div class="photo-thumb" onclick="openLB('${p.url}','${p.kind}')">${photoTile(p)}</div>`).join('')}</div>`;
+}
+function entryCards(list){
+  return `<div class="timeline">${list.map(e=>{
+    const p=firstImage([e]);
+    return `<button class="tl-item" onclick="openEntry('${e.id}')">
+      ${p?`<span class="tl-thumb" style="background-image:url('${p.thumb_url}')"></span>`:`<span class="tl-thumb tl-empty">${ico('book')}</span>`}
+      <span class="tl-text"><span class="tl-date">${fmtLongDate(e.entry_date)}</span><b>${esc(e.title)}</b><span class="tl-body">${esc((e.body||'').slice(0,140))}</span></span>
+      ${ico('chevR')}
+    </button>`;}).join('')}</div>`;
+}
+function backLink(){return `<button class="btn btn-plain back-link" onclick="showHome(true)">${ico('chevL')}Highlights</button>`;}
+function overviewMap(elId,list){
+  const el=document.getElementById(elId); if(!el) return;
+  const m=L.map(el,{attributionControl:false,scrollWheelZoom:false}); addBaseTiles(m);
+  const all=[];
+  list.forEach(e=>{
+    (e.tracks||[]).forEach(t=>{if(t.points&&t.points.length){L.polyline(t.points,{color:'#0a84ff',weight:3.5,opacity:.9,lineCap:'round'}).addTo(m);all.push(...t.points);}});
+    if(e.lat&&e.lng){
+      const p=firstImage([e]);
+      (p?L.marker([e.lat,e.lng],{icon:photoPin(p.thumb_url,38)}):L.circleMarker([e.lat,e.lng],pinStyle(7)))
+        .addTo(m).bindTooltip(esc(e.title)).on('click',()=>openEntry(e.id));
+      all.push([e.lat,e.lng]);
+    }
+  });
+  if(all.length>1) m.fitBounds(L.latLngBounds(all),{padding:[30,30],maxZoom:13}); else if(all.length) m.setView(all[0],11); else m.setView([30,10],2);
+}
+
+function showHome(fromClick){
+  activeId=null; homeShown=true; renderSidebar();
+  const otd=onThisDay(), ts=trips();
+  const years=[...new Set(allEntries.map(e=>e.entry_date.slice(0,4)))].sort().reverse();
+  const hour=new Date().getHours(), greet=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
+  setListContent(`<div class="scroll-wrap"><div>
+    <div class="detail-date">${greet}</div>
+    <div class="detail-title">Highlights</div>
+    ${allEntries.length?statTiles(allEntries):`<p class="muted-text">Your journal is empty. Press + to write your first entry.</p>`}
+
+    ${otd?`<div class="section-title">${otd.title}</div>
+      <div class="memory-row">${otd.list.map(e=>{const p=firstImage([e]);return `
+        <button class="memory" onclick="openEntry('${e.id}')" ${p?`style="background-image:linear-gradient(transparent 35%,rgba(0,0,0,.85)),url('${p.thumb_url}')"`:''}>
+          <span class="memory-when">${yearsAgo(e.entry_date)}</span><b>${esc(e.title)}</b><span>${fmtDate(e.entry_date)}</span>
+        </button>`;}).join('')}</div>`:''}
+
+    ${years.length?`<div class="section-title">Year in Review</div>
+      <div class="year-row">${years.map(y=>{const n=allEntries.filter(e=>e.entry_date.startsWith(y));const p=firstImage(n);return `
+        <button class="year-card" onclick="openYear('${y}')" ${p?`style="--cover:url('${p.thumb_url}')"`:''}>
+          <span class="year-num">${y}</span><span>${n.length} ${n.length===1?'entry':'entries'}</span>
+        </button>`;}).join('')}</div>`:''}
+
+    ${ts.length?`<div class="section-title">Trips &amp; Events<span>${ts.length}</span></div>
+      <div class="trip-grid">${ts.map(t=>`
+        <button class="trip-card" data-trip="${esc(t.name)}" onclick="openTrip(this.dataset.trip)">
+          <span class="trip-cover" ${t.cover?`style="background-image:url('${t.cover.thumb_url}')"`:''}>${t.cover?'':ico('tag')}</span>
+          <b>${esc(t.name)}</b>
+          <span>${t.start===t.end?fmtDate(t.start):`${fmtDate(t.start)} – ${fmtDate(t.end)}`} · ${t.list.length} ${t.list.length===1?'entry':'entries'}</span>
+        </button>`).join('')}</div>`:''}
+
+    <div class="home-foot">
+      ${installPrompt?`<button class="btn" onclick="installApp()">${ico('plus')}Install Folio app</button>`:''}
+      ${isIOS&&!standalone?`<div class="hint-card">${ico('share')}<div>To install Folio on this iPhone, tap <b>Share</b> in Safari, then <b>Add to Home Screen</b>.</div></div>`:''}
+      ${LOCKED?`<form method="post" action="/logout"><button class="btn">${ico('lock')}Lock Folio</button></form>`:''}
+    </div>
+  </div></div>`);
+  if(fromClick) openDetail();
+}
+
+function openTrip(name){
+  activeId=null; homeShown=false; renderSidebar();
+  const t=trips().find(x=>x.name===name); if(!t) return;
+  const days=daysBetween(t.start,t.end)+1;
+  setListContent(`<div class="scroll-wrap"><div>
+    ${backLink()}
+    <div class="hero" ${t.cover?`style="background-image:linear-gradient(transparent 30%,rgba(0,0,0,.88)),url('${t.cover.thumb_url}')"`:''}>
+      <span class="detail-date">${t.start===t.end?fmtLongDate(t.start):`${fmtDate(t.start)} – ${fmtDate(t.end)} · ${days} days`}</span>
+      <div class="hero-title">${esc(t.name)}</div>
+    </div>
+    ${statTiles(t.list)}
+    <div class="section-title">Map</div>
+    <div class="track-map" id="trip-map"></div>
+    ${mosaic(t.list,12)?`<div class="section-title">Photos</div>${mosaic(t.list,12)}`:''}
+    <div class="section-title">Entries<span>${t.list.length}</span></div>
+    ${entryCards(t.list)}
+  </div></div>`);
+  openDetail();
+  setTimeout(()=>overviewMap('trip-map',t.list),60);
+}
+
+function openYear(y){
+  activeId=null; homeShown=false; renderSidebar();
+  const list=allEntries.filter(e=>e.entry_date.startsWith(y)).sort((a,b)=>a.entry_date.localeCompare(b.entry_date));
+  const years=[...new Set(allEntries.map(e=>e.entry_date.slice(0,4)))].sort();
+  const perMonth=Array.from({length:12},(_,m)=>list.filter(e=>Number(e.entry_date.slice(5,7))===m+1).length);
+  const max=Math.max(1,...perMonth), busiest=perMonth.indexOf(Math.max(...perMonth));
+  const places={}; list.forEach(e=>{if(e.place)places[e.place]=(places[e.place]||0)+1;});
+  const topPlaces=Object.entries(places).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const longest=list.filter(e=>entryKm(e)).sort((a,b)=>entryKm(b)-entryKm(a))[0];
+  const months=['J','F','M','A','M','J','J','A','S','O','N','D'];
+  setListContent(`<div class="scroll-wrap"><div>
+    ${backLink()}
+    <div class="year-switch">${years.map(x=>`<button class="pill${x===y?' active':''}" onclick="openYear('${x}')">${x}</button>`).join('')}</div>
+    <div class="hero hero-year"><span class="detail-date">Year in Review</span><div class="hero-title">${y}</div></div>
+    ${statTiles(list)}
+    <div class="section-title">Month by Month${list.length?`<span>Busiest: ${new Date(2000,busiest,1).toLocaleDateString('en-GB',{month:'long'})}</span>`:''}</div>
+    <div class="bars">${perMonth.map((n,i)=>`<div class="bar"><div class="bar-fill" style="height:${n/max*100}%" title="${n}">${n?`<span>${n}</span>`:''}</div><small>${months[i]}</small></div>`).join('')}</div>
+    ${topPlaces.length||longest?`<div class="facts">
+      ${topPlaces.length?`<div class="fact"><div class="fact-label">${ico('pin')}Top places</div>${topPlaces.map(([p,n])=>`<div class="fact-row"><span>${esc(p)}</span><b>${n}</b></div>`).join('')}</div>`:''}
+      ${longest?`<button class="fact" onclick="openEntry('${longest.id}')"><div class="fact-label">${ico('route')}Longest route</div><div class="fact-big">${fmtNum(entryKm(longest),1)} km</div><div class="fact-sub">${esc(longest.title)} · ${fmtDate(longest.entry_date)}</div></button>`:''}
+    </div>`:''}
+    <div class="section-title">Everywhere You Went</div>
+    <div class="track-map" id="year-map"></div>
+    ${mosaic(list,15)?`<div class="section-title">Photos</div>${mosaic(list,15)}`:''}
+  </div></div>`);
+  openDetail();
+  setTimeout(()=>overviewMap('year-map',list),60);
+}
+
+// ── Install as an app ────────────────────────────────────────────────────────
+let installPrompt=null;
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+window.addEventListener('beforeinstallprompt',ev=>{ev.preventDefault();installPrompt=ev;if(homeShown)showHome();});
+async function installApp(){if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;if(homeShown)showHome();}
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 
 // ── View switching ────────────────────────────────────────────────────────
 // On phones the detail pane slides over the list; it gets a history entry so the
@@ -727,7 +661,7 @@ function closeDetail(){
   appEl.classList.remove('detail-open');
   if(detailPushed){detailPushed=false;history.back();}
 }
-function goBack(){closeDetail();activeId=null;renderSidebar();}
+function goBack(){closeDetail();activeId=null;homeShown=false;renderSidebar();}
 window.addEventListener('popstate',()=>{detailPushed=false;if(detailOpen())goBack();});
 function setMapMode(on){
   if(appEl.classList.contains('map-mode')===on) return;
@@ -752,16 +686,11 @@ function switchToMapView(){
 // ── Helpers ────────────────────────────────────────────────────────────────
 function setListContent(html){document.getElementById('view-list').innerHTML=html;}
 function showEmpty(){
-  activeId=null;renderSidebar();
   // On phones, let the pane slide away before swapping its contents
-  if(phone.matches&&detailOpen()){closeDetail();setTimeout(()=>{if(!detailOpen())showEmpty();},450);return;}
-  setListContent(`<div class="empty-state"><div class="empty-glyph">${ico('book')}</div><p>No entry selected</p><small>Choose one from the list, or press + to write a new one.</small></div>`);}
-function fmtLongDate(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
-function pinStyle(r=8){return{radius:r,fillColor:'#0a84ff',color:'#fff',weight:2.5,opacity:1,fillOpacity:1};}
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  if(phone.matches&&detailOpen()){activeId=null;renderSidebar();closeDetail();setTimeout(()=>{if(!detailOpen())showEmpty();},450);return;}
+  showHome();
+}
 function today(){return new Date().toISOString().slice(0,10);}
-function fmtDate(d){if(!d)return'—';return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
-function fmtMonth(ym){if(!ym||ym==='—')return'—';const[y,m]=ym.split('-');return new Date(y,m-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});}
 function wireDropArea(dropId,inputId,cb){
   const d=document.getElementById(dropId),i=document.getElementById(inputId);
   d.addEventListener('click',()=>i.click());
@@ -772,18 +701,7 @@ function wireDropArea(dropId,inputId,cb){
 }
 let _t; function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_t);_t=setTimeout(()=>el.classList.remove('show'),2800);}
 
-// ── Lightbox ──────────────────────────────────────────────────────────────
-function openLB(url,kind){
-  const img=document.getElementById('lb-img'),vid=document.getElementById('lb-vid');
-  img.hidden=kind==='video'; vid.hidden=kind!=='video';
-  if(kind==='video'){vid.src=url;vid.play();}else img.src=url;
-  document.getElementById('lightbox').classList.remove('hidden');
-}
-document.getElementById('lb-vid').addEventListener('click',ev=>ev.stopPropagation());
-document.getElementById('lightbox').addEventListener('click',()=>{
-  const vid=document.getElementById('lb-vid'); vid.pause(); vid.removeAttribute('src'); vid.load();
-  document.getElementById('lightbox').classList.add('hidden');
-});
+wireLightbox();
 
 // ── Events ────────────────────────────────────────────────────────────────
 document.getElementById('btn-back').addEventListener('click',goBack);
@@ -795,7 +713,7 @@ document.getElementById('filter-event').addEventListener('change',e=>{filterEven
 document.getElementById('filter-place').addEventListener('change',e=>{filterPlace=e.target.value;loadEntries();});
 document.getElementById('btn-clear').addEventListener('click',()=>{filterEvent='';filterPlace='';document.getElementById('filter-event').value='';document.getElementById('filter-place').value='';loadEntries();});
 
-showEmpty();
+homeShown=!phone.matches;
 api.get('/api/drive/status').then(s=>{driveConnected=s.connected;}).catch(()=>{});
 if(new URLSearchParams(location.search).get('drive')==='connected'){
   history.replaceState(null,'','/'); setTimeout(()=>toast('Google Drive connected'),300);

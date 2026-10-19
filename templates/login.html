@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Folio</title>
+{% include '_head.html' %}
+<style>
+body{display:flex;align-items:center;justify-content:center;min-height:100dvh;overflow:auto;
+  background:radial-gradient(120% 80% at 50% 0%,#1b1b3a 0%,#000 60%)}
+.lock{width:100%;max-width:340px;padding:24px;text-align:center;animation:rise .5s var(--ease)}
+.lock-badge{width:76px;height:76px;border-radius:18px;margin:0 auto 22px;background:url(/static/icons/icon-192.png) center/cover;
+  box-shadow:0 12px 40px rgba(10,132,255,.35),inset 0 .5px 0 rgba(255,255,255,.3)}
+.lock h1{font-family:var(--font-display);font-size:1.7rem;font-weight:700;letter-spacing:-.02em}
+.lock p{color:var(--text2);margin:6px 0 28px;font-size:.95rem}
+.lock-field{display:flex;gap:8px;background:var(--surface);border-radius:14px;padding:6px;transition:box-shadow .2s}
+.lock-field:focus-within{box-shadow:0 0 0 3.5px rgba(10,132,255,.45)}
+.lock input{flex:1;background:none!important;border:none;box-shadow:none!important;color:#fff;font-size:17px;padding:10px 10px;letter-spacing:.15em;outline:none}
+.lock input::placeholder{letter-spacing:0}
+.lock button{width:44px;height:44px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lock button:active{transform:scale(.96)}
+.lock-err{color:var(--red);font-size:.88rem;margin-top:14px;min-height:1.2em}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+</style>
+</head>
+<body>
+<form class="lock" method="post" autocomplete="on">
+  <div class="lock-badge"></div>
+  <h1>Folio is locked</h1>
+  <p>Enter your passcode to open your journal.</p>
+  <div class="lock-field{% if error %} shake{% endif %}">
+    <input type="password" name="passcode" placeholder="Passcode" autocomplete="current-password" autofocus required>
+    <button type="submit" aria-label="Unlock"><svg class="ico" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+  </div>
+  <div class="lock-err">{{ error or '' }}</div>
+</form>
+</body>
+</html>

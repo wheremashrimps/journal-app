@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="robots" content="noindex"/>
+<title>{{ e.title }} · Folio</title>
+<meta property="og:title" content="{{ e.title }}"/>
+<meta property="og:description" content="A journal entry shared from Folio"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% include '_head.html' %}
+<style>
+html,body{overflow:auto;height:auto}
+.share-page{max-width:720px;margin:0 auto;padding:max(28px,env(safe-area-inset-top)) 20px 60px}
+.share-brand{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--text2);font-size:.85rem;margin-bottom:26px}
+.share-brand span{width:22px;height:22px;border-radius:6px;background:url(/static/icons/icon-192.png) center/cover}
+.share-foot{margin-top:40px;color:var(--text3);font-size:.8rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="share-page">
+  <div class="share-brand"><span></span>Shared from Folio</div>
+  <div class="detail-date" id="date"></div>
+  <div class="detail-title">{{ e.title }}</div>
+  <div class="chips" id="chips"></div>
+  <div class="detail-body">{{ e.body or '' }}</div>
+  <div id="photos"></div>
+  <div id="route"></div>
+  <div class="share-foot">This page shows one entry only. It's read-only.</div>
+</div>
+<div class="lightbox hidden" id="lightbox"><img id="lb-img" src="" alt=""><video id="lb-vid" controls playsinline hidden></video></div>
+<script src="/static/common.js?v={{ asset_v }}"></script>
+<script>
+const e={{ e|tojson }};
+document.getElementById('date').textContent=fmtLongDate(e.entry_date);
+document.getElementById('chips').innerHTML=[
+  e.place?`<span class="chip">${ico('pin')}${esc(e.place)}</span>`:'',
+  e.event?`<span class="chip">${ico('tag')}${esc(e.event)}</span>`:'',
+  weatherChip(e.weather),
+].join('');
+if(e.photos.length){
+  document.getElementById('photos').innerHTML=`<div class="section-title">Photos &amp; Videos<span>${e.photos.length}</span></div>
+    <div class="photo-grid">${e.photos.map(p=>`<div class="photo-thumb" onclick="openLB('${p.url}','${p.kind}')">${photoTile(p)}</div>`).join('')}</div>`;
+}
+if(e.tracks.length){
+  document.getElementById('route').innerHTML=`<div class="section-title">Route<span>${e.tracks.map(t=>t.distance_km?t.distance_km+' km':'').filter(Boolean).join(' + ')}</span></div>
+    <div class="track-map" id="map"></div><div class="elev" id="elev"></div>`;
+  renderRoute(document.getElementById('map'),e.tracks,document.getElementById('elev'));
+}
+wireLightbox();
+</script>
+</body>
+</html>
