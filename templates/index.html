@@ -6,211 +6,250 @@
 <title>Folio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#1c1c1e"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0d0c0b;--surface:#141210;--panel:#1a1714;
-  --border:#2a2520;--border2:#3a322a;
-  --text:#c9bfb0;--dim:#6b6058;--muted:#8a7d72;
-  --gold:#b8956a;--gold-dim:#7a6040;--red:#8b3a3a;
-  --serif:'Cormorant Garamond',Georgia,serif;
-  --mono:'DM Mono',monospace;
+  /* Apple dark system palette */
+  --bg:#000;--surface:#1c1c1e;--elevated:#2c2c2e;--elevated2:#3a3a3c;
+  --fill:rgba(118,118,128,.24);--fill2:rgba(118,118,128,.16);
+  --sep:rgba(84,84,88,.55);--sep-soft:rgba(84,84,88,.3);
+  --text:#fff;--text2:rgba(235,235,245,.62);--text3:rgba(235,235,245,.32);
+  --accent:#0a84ff;--accent-soft:rgba(10,132,255,.16);--red:#ff453a;--red-soft:rgba(255,69,58,.14);
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Helvetica Neue',sans-serif;
+  --font-display:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Helvetica Neue',sans-serif;
+  --blur:saturate(180%) blur(24px);
+  --ease:cubic-bezier(.25,.1,.25,1);
 }
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--serif);font-size:18px;overflow:hidden}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;overflow:hidden;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+.ico{width:1em;height:1em;flex:none;vertical-align:-.125em;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+::selection{background:var(--accent-soft)}
 
 /* ── Shell ── */
-.app{display:grid;grid-template-columns:270px 1fr;grid-template-rows:52px 1fr;height:100vh}
+.app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:56px 1fr;height:100vh}
 
-/* ── Header ── */
-header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--border);background:var(--surface)}
-.wordmark{font-size:1.3rem;font-weight:300;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-style:italic}
-.hdr-right{display:flex;align-items:center;gap:10px}
-.view-tabs{display:flex;gap:2px;background:var(--bg);border-radius:3px;padding:3px}
-.view-tab{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;border-radius:2px;border:none;background:transparent;color:var(--dim);cursor:pointer;transition:all .2s}
-.view-tab.active{background:var(--panel);color:var(--gold)}
-.view-tab:hover:not(.active){color:var(--muted)}
+/* ── Header (frosted toolbar) ── */
+header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;background:rgba(28,28,30,.72);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:.5px solid var(--sep);z-index:500}
+.wordmark{font-family:var(--font-display);font-size:1.25rem;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+.wordmark-badge{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,#5e5ce6,#0a84ff);display:flex;align-items:center;justify-content:center;font-size:.85rem;box-shadow:0 1px 3px rgba(0,0,0,.4),inset 0 .5px 0 rgba(255,255,255,.3)}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.view-tabs{display:flex;background:var(--fill);border-radius:9px;padding:2px;position:relative}
+.view-tab{font:500 .8rem var(--font);padding:5px 16px;border-radius:7px;border:none;background:transparent;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s var(--ease);opacity:.85}
+.view-tab.active{background:#636366;opacity:1;box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
+.view-tab:hover:not(.active){opacity:1}
 
 /* ── Sidebar ── */
-aside{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.sb-sec{padding:13px 15px 11px;border-bottom:1px solid var(--border)}
-.sb-lbl{font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
-input,textarea,select{font-family:var(--mono);font-size:.72rem}
-input[type=search],input[type=text]{width:100%;background:var(--panel);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:3px;outline:none}
-input[type=search]:focus,input[type=text]:focus{border-color:var(--gold-dim)}
-input::placeholder{color:var(--dim)}
-input[type=date]{width:100%;background:var(--panel);border:1px solid var(--gold-dim);color:var(--gold);padding:8px 10px;border-radius:3px;outline:none;cursor:pointer}
-input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) saturate(3) hue-rotate(5deg);cursor:pointer}
-select{width:100%;background:var(--panel);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:3px;outline:none;cursor:pointer;margin-bottom:7px}
-select:focus{border-color:var(--gold-dim)}
-textarea{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border2);color:var(--text);padding:6px 0 8px;outline:none;resize:none;font-family:var(--serif);transition:border-color .2s}
-textarea:focus{border-bottom-color:var(--gold-dim)}
-.sort-pills{display:flex;gap:5px}
-.pill{flex:1;font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;padding:5px 6px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .18s;text-align:center}
-.pill:hover{border-color:var(--gold-dim);color:var(--gold)}
-.pill.active{background:var(--gold-dim);border-color:var(--gold-dim);color:var(--bg)}
-.entry-list{flex:1;overflow-y:auto}
-.entry-list::-webkit-scrollbar{width:3px}
-.entry-list::-webkit-scrollbar-thumb{background:var(--border2)}
-.grp-hdr{font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);padding:9px 15px 5px;background:var(--bg);border-bottom:1px solid var(--border)}
-.entry-item{padding:11px 15px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;position:relative}
-.entry-item:hover{background:var(--panel)}
-.entry-item.active{background:var(--panel)}
-.entry-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold)}
-.ei-title{font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ei-meta{font-family:var(--mono);font-size:.57rem;color:var(--dim);margin-top:3px;display:flex;gap:5px;flex-wrap:wrap}
-.ei-tag{color:var(--gold-dim)}
-.no-entries{padding:20px 15px;font-family:var(--mono);font-size:.63rem;color:var(--dim);text-align:center}
+aside{background:var(--surface);border-right:.5px solid var(--sep);display:flex;flex-direction:column;overflow:hidden}
+.sb-sec{padding:12px 14px 4px}
+.sb-sec:last-of-type{padding-bottom:12px;border-bottom:.5px solid var(--sep-soft)}
+.sb-lbl{font-size:.72rem;font-weight:600;color:var(--text3);margin:0 4px 6px;text-transform:none}
+input,textarea,select{font-family:var(--font);font-size:.9rem;color:var(--text)}
+.search-wrap{position:relative}
+.search-wrap .ico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:.95rem}
+input[type=search],input[type=text]{width:100%;background:var(--fill);border:none;color:var(--text);padding:8px 10px;border-radius:10px;outline:none;transition:box-shadow .2s}
+input[type=search]{padding-left:31px;-webkit-appearance:none}
+input[type=search]::-webkit-search-cancel-button{filter:invert(1) opacity(.5)}
+input[type=search]:focus,input[type=text]:focus{box-shadow:0 0 0 3.5px rgba(10,132,255,.45)}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+input[type=date]{background:var(--fill);border:none;color:var(--accent);padding:7px 12px;border-radius:8px;outline:none;cursor:pointer;font-weight:500;color-scheme:dark}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(42%) sepia(93%) saturate(3000%) hue-rotate(200deg);cursor:pointer}
+select{width:100%;appearance:none;-webkit-appearance:none;background:var(--fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23ebebf5' stroke-opacity='.6' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 11px center;border:none;color:var(--text);padding:8px 28px 8px 11px;border-radius:10px;outline:none;cursor:pointer;margin-bottom:8px}
+select:focus{box-shadow:0 0 0 3.5px rgba(10,132,255,.45)}
+textarea{width:100%;background:transparent;border:none;color:var(--text);outline:none;resize:none;font-family:var(--font)}
+.sort-pills{display:flex;background:var(--fill);border-radius:9px;padding:2px;margin-bottom:8px}
+.pill{flex:1;font:500 .78rem var(--font);padding:4px 6px;border-radius:7px;border:none;background:transparent;color:var(--text);cursor:pointer;transition:background .2s var(--ease);text-align:center}
+.pill.active{background:#636366;box-shadow:0 3px 8px rgba(0,0,0,.12)}
+.filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.filter-row select{margin-bottom:0}
+#btn-clear{background:none;border:none;color:var(--accent);font:400 .8rem var(--font);cursor:pointer;padding:8px 4px 2px}
+#btn-clear:hover{opacity:.75}
+.entry-list{flex:1;overflow-y:auto;padding:4px 10px 20px}
+.entry-list::-webkit-scrollbar{width:0}
+.grp-hdr{font-family:var(--font-display);font-size:.95rem;font-weight:700;color:var(--text);padding:16px 8px 6px;position:sticky;top:0;background:linear-gradient(var(--surface) 75%,transparent);z-index:1}
+.entry-item{padding:10px 12px;border-radius:10px;cursor:pointer;transition:background .15s var(--ease);position:relative;margin-bottom:1px}
+.entry-item+.entry-item::after{content:'';position:absolute;left:12px;right:12px;top:-1px;height:.5px;background:var(--sep-soft)}
+.entry-item:hover{background:var(--fill2)}
+.entry-item.active{background:var(--accent)}
+.entry-item.active::after,.entry-item.active+.entry-item::after{display:none}
+.ei-title{font-size:.93rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.ei-title span:first-child{overflow:hidden;text-overflow:ellipsis}
+.ei-badges{display:flex;gap:4px;color:var(--text3);font-size:.8rem;margin-left:auto}
+.ei-meta{font-size:.78rem;color:var(--text2);margin-top:2px;display:flex;gap:6px;white-space:nowrap;overflow:hidden}
+.ei-tag{overflow:hidden;text-overflow:ellipsis}
+.entry-item.active .ei-meta,.entry-item.active .ei-badges{color:rgba(255,255,255,.78)}
+.no-entries{padding:40px 15px;font-size:.85rem;color:var(--text3);text-align:center}
 
 /* ── Main ── */
-main{overflow:hidden;display:flex;flex-direction:column;position:relative}
+main{overflow:hidden;display:flex;flex-direction:column;position:relative;background:var(--bg)}
 .view{display:none;flex:1;overflow:hidden;flex-direction:column}
 .view.active{display:flex}
-.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--dim);gap:12px}
-.empty-glyph{font-size:3rem;opacity:.1;font-style:italic}
-.empty-state p{font-family:var(--mono);font-size:.63rem;letter-spacing:.15em;text-transform:uppercase}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);gap:14px;text-align:center}
+.empty-glyph{font-size:3.2rem;color:var(--elevated2)}
+.empty-state p{font-size:1rem;font-weight:500;color:var(--text2)}
+.empty-state small{font-size:.85rem;color:var(--text3);margin-top:-8px}
 
 /* ── Detail / Form scroll containers ── */
-.scroll-wrap{flex:1;overflow-y:auto;padding:34px 46px}
-.scroll-wrap::-webkit-scrollbar{width:3px}
-.scroll-wrap::-webkit-scrollbar-thumb{background:var(--border2)}
-.scroll-wrap>*{max-width:760px;margin:0 auto}
+.scroll-wrap{flex:1;overflow-y:auto;padding:44px 48px 80px;animation:rise .35s var(--ease)}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.scroll-wrap::-webkit-scrollbar{width:8px}
+.scroll-wrap::-webkit-scrollbar-thumb{background:var(--elevated);border-radius:4px;border:2px solid var(--bg)}
+.scroll-wrap>*{max-width:720px;margin:0 auto}
 
 /* ── Detail ── */
-.detail-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
-.chips{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
-.chip{font-family:var(--mono);font-size:.58rem;padding:3px 8px;border:1px solid var(--border2);border-radius:2px;color:var(--gold-dim)}
-.detail-actions{display:flex;gap:7px}
-.detail-title{font-size:2.3rem;font-weight:300;font-style:italic;line-height:1.2;margin-bottom:22px}
-.detail-body{font-size:1rem;font-weight:300;line-height:1.9;color:var(--muted);white-space:pre-wrap}
+.detail-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px}
+.detail-date{font-size:.85rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:26px}
+.chip{font-size:.8rem;font-weight:500;padding:5px 11px;background:var(--fill2);border-radius:999px;color:var(--text2);display:inline-flex;align-items:center;gap:5px}
+.detail-actions{display:flex;gap:8px}
+.detail-title{font-family:var(--font-display);font-size:2.4rem;font-weight:700;letter-spacing:-.025em;line-height:1.1;margin-bottom:14px}
+.detail-body{font-size:1.06rem;line-height:1.6;color:rgba(255,255,255,.86);white-space:pre-wrap;letter-spacing:-.005em}
+.section-title{font-family:var(--font-display);font-size:1.2rem;font-weight:700;margin:36px 0 12px;display:flex;align-items:baseline;justify-content:space-between}
+.section-title span{font:400 .85rem var(--font);color:var(--text2)}
 
 /* ── Track map in detail ── */
-.track-map-wrap{margin-top:28px}
-.track-map-label{font-family:var(--mono);font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
-.track-map-label span{color:var(--gold-dim)}
-.track-map{height:260px;border-radius:4px;border:1px solid var(--border2)}
-.track-list{margin-top:10px;display:flex;flex-direction:column;gap:6px}
-.track-item{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--border);border-radius:3px;padding:8px 12px;font-family:var(--mono);font-size:.63rem;color:var(--muted)}
-.track-item-name{color:var(--text)}
-.track-item-dist{color:var(--gold-dim)}
+.track-map-wrap{margin-top:0}
+.track-map-label{display:none}
+.track-map{height:280px;border-radius:14px;overflow:hidden}
+.track-list{margin-top:10px;background:var(--surface);border-radius:12px;overflow:hidden}
+.track-item{display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:.9rem}
+.track-item+.track-item{border-top:.5px solid var(--sep-soft)}
+.track-item-name{flex:1;display:flex;align-items:center;gap:8px}
+.track-item-name .ico{color:var(--accent)}
+.track-item-dist{color:var(--text2)}
 
 /* ── Photos ── */
-.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:28px}
-.photo-thumb{position:relative;aspect-ratio:1;overflow:hidden;border-radius:3px;border:1px solid var(--border);cursor:pointer}
-.photo-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .3s;display:block}
-.photo-thumb:hover img{transform:scale(1.05)}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;border-radius:14px;overflow:hidden}
+.photo-grid:empty{display:none}
+.photo-thumb{position:relative;aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--surface)}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .5s var(--ease),filter .3s;display:block}
+.photo-thumb:hover img{transform:scale(1.04)}
 .photo-thumb video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-.photo-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.6rem;text-shadow:0 1px 6px rgba(0,0,0,.8);pointer-events:none}
-.photo-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.78);border:none;color:#fff;width:20px;height:20px;border-radius:50%;font-size:.62rem;cursor:pointer;display:none;align-items:center;justify-content:center}
-.photo-thumb:hover .photo-del{display:flex}
-.drop-area{border:1px dashed var(--border2);border-radius:3px;padding:14px;text-align:center;font-family:var(--mono);font-size:.63rem;color:var(--dim);cursor:pointer;transition:border-color .2s;margin-top:10px}
-.drop-area:hover,.drop-area.drag-over{border-color:var(--gold-dim);color:var(--gold)}
-.drop-area input{display:none}
+.photo-play{position:absolute;left:8px;bottom:8px;width:28px;height:28px;border-radius:50%;background:rgba(30,30,30,.55);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;pointer-events:none}
+.photo-del{position:absolute;top:7px;right:7px;background:rgba(30,30,30,.6);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:none;color:#fff;width:26px;height:26px;border-radius:50%;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.85);transition:all .2s var(--ease)}
+.photo-thumb:hover .photo-del{opacity:1;transform:none}
+.upload-row{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:12px}
+.drop-area,.gpx-drop{border-radius:12px;padding:16px 14px;text-align:center;font-size:.85rem;font-weight:500;color:var(--accent);background:var(--surface);cursor:pointer;transition:background .2s var(--ease);display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed transparent}
+.drop-area:hover,.gpx-drop:hover{background:var(--elevated)}
+.drop-area.drag-over,.gpx-drop.drag-over{border-color:var(--accent);background:var(--accent-soft)}
+.drop-area input,.gpx-drop input{display:none}
+.drop-area .ico,.gpx-drop .ico{font-size:1.1rem}
 
-/* ── GPX upload drop ── */
-.gpx-drop{border:1px dashed var(--gold-dim);border-radius:3px;padding:12px 14px;text-align:center;font-family:var(--mono);font-size:.63rem;color:var(--gold-dim);cursor:pointer;transition:all .2s;margin-top:10px}
-.gpx-drop:hover,.gpx-drop.drag-over{background:rgba(184,149,106,.07);color:var(--gold)}
-.gpx-drop input{display:none}
-
-/* ── Form ── */
-.f-lbl{font-family:var(--mono);font-size:.57rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:5px}
-.f-field{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border2);color:var(--text);font-family:var(--serif);padding:5px 0 7px;margin-bottom:20px;outline:none;font-size:1rem;transition:border-color .2s;border-radius:0}
-.f-field:focus{border-bottom-color:var(--gold-dim)}
-.f-title{font-size:1.9rem;font-style:italic;font-weight:300}
-.f-body{min-height:190px;font-weight:300;line-height:1.85;margin-bottom:20px}
-.f-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.f-date-wrap{margin-bottom:20px}
-.f-date-lbl{font-family:var(--mono);font-size:.57rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-dim);display:block;margin-bottom:5px}
-.f-actions{display:flex;gap:9px;margin-top:4px;flex-wrap:wrap;align-items:center}
+/* ── Form (inset grouped, like iOS Settings) ── */
+.form-title{font-family:var(--font-display);font-size:2rem;font-weight:700;letter-spacing:-.02em;margin-bottom:22px}
+.group{background:var(--surface);border-radius:12px;margin-bottom:22px;overflow:hidden}
+.group-row{display:flex;align-items:center;gap:12px;padding:0 16px;min-height:46px}
+.group-row+.group-row{border-top:.5px solid var(--sep-soft)}
+.group-row>label{font-size:.95rem;width:96px;flex:none;color:var(--text)}
+.f-lbl{font-size:.75rem;font-weight:400;color:var(--text2);display:block;margin:0 16px 7px;text-transform:uppercase;letter-spacing:.02em}
+.f-field{width:100%;background:transparent;border:none;color:var(--text);font-family:var(--font);padding:12px 0;outline:none;font-size:.95rem;border-radius:0}
+.f-field:focus{box-shadow:none}
+input.f-field[type=text],input.f-field:not([type]){background:transparent;padding:12px 0;box-shadow:none!important}
+.f-title{font-family:var(--font-display);font-size:1.35rem;font-weight:600;padding:14px 0}
+.f-body{min-height:220px;line-height:1.55;padding:14px 0;display:block;font-size:1rem}
+.group-row.tall{align-items:stretch}
+.f-row{display:contents}
+.f-date-wrap{display:contents}
+.f-actions{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;align-items:center}
+.hint{font-size:.78rem;color:var(--text3);margin:-14px 16px 22px}
 
 /* location picker */
-.loc-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:6px}
-.loc-coords{font-family:var(--mono);font-size:.58rem;color:var(--dim);min-height:13px}
-#pick-map{height:200px;border-radius:3px;border:1px solid var(--border2);margin-top:8px;display:none;margin-bottom:20px}
-#pick-map.visible{display:block}
+.loc-row{display:flex;align-items:center;gap:12px;padding:0 16px;min-height:46px}
+.loc-coords{flex:1;font-size:.9rem;color:var(--text2);font-variant-numeric:tabular-nums}
+#pick-map{height:240px;display:none}
+#pick-map.visible{display:block;border-top:.5px solid var(--sep-soft)}
 
 /* ── World map ── */
 #view-map{position:relative}
 #world-map{width:100%;height:100%}
-.map-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--dim);gap:10px;pointer-events:none}
-.map-empty p{font-family:var(--mono);font-size:.63rem;letter-spacing:.15em;text-transform:uppercase}
+.map-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text2);gap:10px;pointer-events:none}
+.map-empty p{font-size:.95rem;font-weight:500;background:rgba(28,28,30,.7);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);padding:10px 18px;border-radius:999px}
+.map-empty .empty-glyph{display:none}
 
 /* ── Buttons ── */
-.btn{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:7px 15px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .18s}
-.btn:hover{border-color:var(--gold-dim);color:var(--gold)}
-.btn-gold{background:var(--gold-dim);border-color:var(--gold-dim);color:var(--bg)}
-.btn-gold:hover{background:var(--gold);border-color:var(--gold);color:var(--bg)}
-.btn-danger{border-color:var(--red);color:var(--red)}
-.btn-danger:hover{background:var(--red);color:#fff}
-.btn-sm{padding:5px 10px;font-size:.57rem}
+.btn{font:500 .88rem var(--font);padding:8px 16px;border-radius:999px;border:none;background:var(--fill);color:var(--accent);cursor:pointer;transition:all .15s var(--ease);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:rgba(118,118,128,.32)}
+.btn:active{transform:scale(.97)}
+.btn-gold{background:var(--accent);color:#fff}
+.btn-gold:hover{background:#409cff}
+.btn-danger{background:var(--red-soft);color:var(--red)}
+.btn-danger:hover{background:rgba(255,69,58,.24)}
+.btn-sm{padding:6px 13px;font-size:.82rem}
+.btn-icon{width:34px;height:34px;padding:0;justify-content:center;font-size:1rem}
+.btn-plain{background:none;padding:6px 4px}
+.btn-plain:hover{background:none;opacity:.75}
+#btn-new{width:34px;height:34px;padding:0;justify-content:center;font-size:1.1rem}
 
 /* ── Lightbox ── */
-.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out;animation:fade .25s var(--ease)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
 .lightbox.hidden{display:none}
-.lightbox img,.lightbox video{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:3px}
+.lightbox img,.lightbox video{max-width:92vw;max-height:90vh;object-fit:contain;border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,.6);animation:zoomin .3s var(--ease)}
+@keyframes zoomin{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
 .lightbox video{cursor:auto}
 
-/* ── Toast ── */
-.toast{position:fixed;bottom:18px;right:18px;background:var(--panel);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:.63rem;padding:8px 15px;border-radius:3px;z-index:9998;opacity:0;transform:translateY(5px);transition:all .22s;pointer-events:none}
-.toast.show{opacity:1;transform:translateY(0)}
+/* ── Toast (HUD) ── */
+.toast{position:fixed;bottom:28px;left:50%;background:rgba(44,44,46,.82);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);color:var(--text);font-size:.88rem;font-weight:500;padding:11px 20px;border-radius:999px;z-index:9998;opacity:0;transform:translate(-50%,10px) scale(.96);transition:all .3s var(--ease);pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
 
-/* Leaflet dark theme */
-.leaflet-container{background:#0d0c0b;font-family:var(--mono)}
-.leaflet-popup-content-wrapper{background:var(--panel);border:1px solid var(--border2);border-radius:3px;box-shadow:0 4px 20px rgba(0,0,0,.6);color:var(--text)}
-.leaflet-popup-tip{background:var(--panel)}
-.leaflet-popup-close-button{color:var(--dim)!important}
-.map-popup-title{font-family:'Cormorant Garamond',serif;font-size:1rem;font-style:italic;color:#c9bfb0;margin-bottom:2px}
-.map-popup-meta{font-family:'DM Mono',monospace;font-size:.58rem;color:#8a7d72;margin-bottom:5px}
-.map-popup-dist{font-family:'DM Mono',monospace;font-size:.58rem;color:#b8956a}
-.map-popup-link{font-family:'DM Mono',monospace;font-size:.58rem;color:#b8956a;cursor:pointer;text-decoration:underline;margin-top:4px;display:inline-block}
+/* Leaflet */
+.leaflet-container{background:#191a1a;font-family:var(--font)}
+.leaflet-bar{border:none!important;border-radius:10px!important;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.4)!important}
+.leaflet-bar a{background:rgba(44,44,46,.85)!important;color:#fff!important;border-bottom-color:var(--sep)!important;backdrop-filter:var(--blur)}
+.leaflet-control-attribution{background:rgba(0,0,0,.45)!important;color:var(--text3)!important;font-size:10px}
+.leaflet-control-attribution a{color:var(--text2)!important}
+.leaflet-popup-content-wrapper{background:rgba(44,44,46,.88);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);color:var(--text)}
+.leaflet-popup-content{margin:12px 16px}
+.leaflet-popup-tip{background:rgba(44,44,46,.88)}
+.leaflet-popup-close-button{color:var(--text2)!important}
+.map-popup-title{font-size:.98rem;font-weight:600;color:#fff;margin-bottom:2px}
+.map-popup-meta{font-size:.78rem;color:var(--text2);margin-bottom:6px}
+.map-popup-dist{font-size:.78rem;color:var(--text2)}
+.map-popup-link{font-size:.82rem;font-weight:500;color:var(--accent);cursor:pointer;margin-top:6px;display:inline-block}
 </style>
 </head>
 <body>
 <div class="app">
 
 <header>
-  <div class="wordmark">Folio</div>
+  <div class="wordmark"><span class="wordmark-badge" id="wm-badge"></span>Folio</div>
   <div class="hdr-right">
     <div class="view-tabs">
-      <button class="view-tab active" data-view="list">☰ Journal</button>
-      <button class="view-tab" data-view="map">⬡ Map</button>
+      <button class="view-tab active" data-view="list" data-ico="list">Journal</button>
+      <button class="view-tab" data-view="map" data-ico="map">Map</button>
     </div>
-    <button class="btn btn-gold btn-sm" id="btn-new">+ New Entry</button>
+    <button class="btn btn-gold" id="btn-new" title="New entry" data-ico="plus"></button>
   </div>
 </header>
 
 <aside>
   <div class="sb-sec">
-    <div class="sb-lbl">Search</div>
-    <input type="search" id="search-input" placeholder="Search…">
+    <div class="search-wrap" data-ico="search"><input type="search" id="search-input" placeholder="Search"></div>
   </div>
   <div class="sb-sec">
-    <div class="sb-lbl">Sort by</div>
     <div class="sort-pills">
       <button class="pill active" data-sort="date">Date</button>
       <button class="pill" data-sort="event">Event</button>
       <button class="pill" data-sort="place">Place</button>
     </div>
-  </div>
-  <div class="sb-sec">
-    <div class="sb-lbl">Filter</div>
-    <select id="filter-event"><option value="">All events</option></select>
-    <select id="filter-place"><option value="">All places</option></select>
-    <button class="btn btn-sm" id="btn-clear" style="width:100%">Clear filters</button>
+    <div class="filter-row">
+      <select id="filter-event"><option value="">All events</option></select>
+      <select id="filter-place"><option value="">All places</option></select>
+    </div>
+    <button id="btn-clear">Clear filters</button>
   </div>
   <div class="entry-list" id="entry-list"><div class="no-entries">No entries yet</div></div>
 </aside>
 
 <main>
   <div class="view active" id="view-list">
-    <div class="empty-state"><div class="empty-glyph">✦</div><p>Select or create an entry</p></div>
   </div>
   <div class="view" id="view-map">
     <div id="world-map"></div>
     <div class="map-empty" id="map-empty" style="display:none">
-      <div class="empty-glyph">⬡</div><p>No mapped entries yet</p>
+      <p>No mapped entries yet</p>
     </div>
   </div>
 </main>
@@ -226,6 +265,26 @@ let worldMap=null, worldLayers=[], pickMap=null, pickMarker=null;
 let currentView='list';
 let detailTrackMap=null;
 let driveConnected=false;
+
+// ── Icons ───────────────────────────────────────────────────────────────
+const ICONS={
+  list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".6"/><circle cx="3.5" cy="12" r=".6"/><circle cx="3.5" cy="18" r=".6"/>',
+  map:'<path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5V4l-6 2.5L9 4z"/><path d="M9 4v13M15 6.5v13"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+  pin:'<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
+  tag:'<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.2 6.2a1.4 1.4 0 0 1-2 0z"/><circle cx="8" cy="8" r="1.3"/>',
+  route:'<circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8.2 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.8"/>',
+  pencil:'<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/>',
+  trash:'<path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13"/>',
+  photo:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 8"/>',
+  play:'<path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="none"/>',
+  xmark:'<path d="M6 6l12 12M18 6 6 18"/>',
+  book:'<path d="M5 4.5h9.5a2.5 2.5 0 0 1 2.5 2.5v12.5H7.5A2.5 2.5 0 0 1 5 17V4.5z"/><path d="M5 17a2.5 2.5 0 0 1 2.5-2.5H17"/>',
+};
+function ico(n){return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;}
+document.querySelectorAll('[data-ico]').forEach(el=>el.insertAdjacentHTML('afterbegin',ico(el.dataset.ico)));
+document.getElementById('wm-badge').innerHTML=ico('book');
 
 // ── API ────────────────────────────────────────────────────────────────────
 const api={
@@ -260,13 +319,10 @@ function renderSidebar(){
     const group=sort==='event'?(e.event||'—'):sort==='place'?(e.place||'—'):(e.entry_date||'—').slice(0,7);
     if(group!==lastGroup){html+=`<div class="grp-hdr">${sort==='date'?fmtMonth(group):group}</div>`;lastGroup=group;}
     const hasTrack=e.tracks&&e.tracks.length>0, hasPin=e.lat&&e.lng;
-    const icons=(hasTrack?'〜':'')+((hasPin&&!hasTrack)?'⬡':'');
+    const badges=(e.photos&&e.photos.length?ico('photo'):'')+(hasTrack?ico('route'):hasPin?ico('pin'):'');
     html+=`<div class="entry-item${e.id===activeId?' active':''}" data-id="${e.id}">
-      <div class="ei-title">${esc(e.title)}${icons?` <span style="color:var(--gold-dim);font-size:.6rem">${icons}</span>`:''}</div>
-      <div class="ei-meta"><span>${fmtDate(e.entry_date)}</span>
-        ${e.place?`<span class="ei-tag">📍 ${esc(e.place)}</span>`:''}
-        ${e.event?`<span class="ei-tag">◆ ${esc(e.event)}</span>`:''}
-      </div>
+      <div class="ei-title"><span>${esc(e.title)}</span><span class="ei-badges">${badges}</span></div>
+      <div class="ei-meta"><span>${fmtDate(e.entry_date)}</span>${e.place?`<span class="ei-tag">${esc(e.place)}</span>`:e.event?`<span class="ei-tag">${esc(e.event)}</span>`:''}</div>
     </div>`;
   });
   list.innerHTML=html;
@@ -280,19 +336,18 @@ async function openEntry(id){
   const e=await api.get(`/api/entries/${id}`);
 
   const chips=[
-    `<span class="chip">${fmtDate(e.entry_date)}</span>`,
-    e.event?`<span class="chip">◆ ${esc(e.event)}</span>`:'',
-    e.place?`<span class="chip">📍 ${esc(e.place)}</span>`:'',
-    (e.tracks&&e.tracks.length)?`<span class="chip">〜 ${e.tracks.length} track${e.tracks.length>1?'s':''}</span>`:'',
-    (e.lat&&e.lng&&!(e.tracks&&e.tracks.length))?`<span class="chip">⬡ mapped</span>`:'',
+    e.place?`<span class="chip">${ico('pin')}${esc(e.place)}</span>`:'',
+    e.event?`<span class="chip">${ico('tag')}${esc(e.event)}</span>`:'',
+    (e.tracks&&e.tracks.length)?`<span class="chip">${ico('route')}${e.tracks.length} track${e.tracks.length>1?'s':''}</span>`:'',
+    (e.lat&&e.lng&&!(e.tracks&&e.tracks.length)&&!e.place)?`<span class="chip">${ico('pin')}Pinned</span>`:'',
   ].filter(Boolean).join('');
 
   const photos=e.photos.map(p=>`
     <div class="photo-thumb" onclick="openLB('${p.url}','${p.kind}')">
       ${p.kind==='video'
-        ?`<video src="${p.url}#t=0.1" preload="metadata" muted playsinline></video><span class="photo-play">▶</span>`
+        ?`<video src="${p.url}#t=0.1" preload="metadata" muted playsinline></video><span class="photo-play">${ico('play')}</span>`
         :`<img src="${p.url}" alt="${esc(p.original_name||'')}" loading="lazy">`}
-      <button class="photo-del" onclick="delPhoto('${p.id}','${id}',event)">✕</button>
+      <button class="photo-del" title="Delete" onclick="delPhoto('${p.id}','${id}',event)">${ico('xmark')}</button>
     </div>`).join('');
 
   // Track section
@@ -300,11 +355,12 @@ async function openEntry(id){
   if(e.tracks&&e.tracks.length){
     const trackItems=e.tracks.map(t=>`
       <div class="track-item" id="ti-${t.id}">
-        <span class="track-item-name">${esc(t.track_name||t.original_name||'Track')}</span>
+        <span class="track-item-name">${ico('route')}${esc(t.track_name||t.original_name||'Track')}</span>
         <span class="track-item-dist">${t.distance_km?t.distance_km+' km':''}</span>
-        <button class="btn btn-sm btn-danger" onclick="delTrack('${t.id}','${id}',event)" style="margin-left:12px">✕</button>
+        <button class="btn btn-plain btn-sm" style="color:var(--red)" title="Remove track" onclick="delTrack('${t.id}','${id}',event)">${ico('trash')}</button>
       </div>`).join('');
     trackSection=`
+      <div class="section-title">Route<span>${e.tracks.map(t=>t.distance_km?t.distance_km+' km':'').filter(Boolean).join(' + ')}</span></div>
       <div class="track-map-wrap">
         <div class="track-map-label">
           GPS Tracks
@@ -317,24 +373,28 @@ async function openEntry(id){
 
   setListContent(`<div class="scroll-wrap"><div>
     <div class="detail-top">
-      <div class="chips">${chips}</div>
+      <div class="detail-date">${fmtLongDate(e.entry_date)}</div>
       <div class="detail-actions">
-        <button class="btn btn-sm" onclick="openEditForm('${id}')">✎ Edit</button>
-        <button class="btn btn-sm btn-danger" onclick="delEntry('${id}')">✕</button>
+        <button class="btn btn-sm" onclick="openEditForm('${id}')">${ico('pencil')}Edit</button>
+        <button class="btn btn-icon btn-danger" title="Delete entry" onclick="delEntry('${id}')">${ico('trash')}</button>
       </div>
     </div>
     <div class="detail-title">${esc(e.title)}</div>
+    ${chips?`<div class="chips">${chips}</div>`:'<div style="height:12px"></div>'}
     <div class="detail-body">${esc(e.body||'')}</div>
-    ${trackSection}
+    <div class="section-title">Photos &amp; Videos<span>${e.photos.length||''}</span></div>
     <div class="photo-grid" id="pg-${id}">${photos}</div>
+    <div class="upload-row">
     <div class="drop-area" id="drop-img-${id}">
       <input type="file" id="fi-${id}" accept="image/*,video/*" multiple>
-      <span id="drop-label-${id}">Drop photos or videos here or click to upload${driveConnected?' · saved to Google Drive':''}</span>
+      ${ico('photo')}<span id="drop-label-${id}">Add photos or videos${driveConnected?' · Google Drive':''}</span>
     </div>
     <div class="gpx-drop" id="drop-gpx-${id}">
       <input type="file" id="fg-${id}" accept=".gpx">
-      〜 Drop a GPX file here to attach a track
+      ${ico('route')}Add GPX route
     </div>
+    </div>
+    ${trackSection}
   </div></div>`);
 
   // Wire photo upload
@@ -372,13 +432,13 @@ function renderDetailTrackMap(entryId, tracks){
   const allPts=[];
   tracks.forEach((t,i)=>{
     if(!t.points||!t.points.length) return;
-    const color=i===0?'#b8956a':'#8a7d72';
-    L.polyline(t.points,{color,weight:2.5,opacity:.85}).addTo(m);
+    const color=i===0?'#0a84ff':'#64d2ff';
+    L.polyline(t.points,{color,weight:4,opacity:.95,lineCap:'round',lineJoin:'round'}).addTo(m);
     // start/end markers
     const s=t.points[0], e=t.points[t.points.length-1];
-    L.circleMarker(s,{radius:5,fillColor:'#b8956a',color:'#7a6040',weight:1.5,fillOpacity:1}).addTo(m)
+    L.circleMarker(s,{radius:5,fillColor:'#30d158',color:'#fff',weight:2,fillOpacity:1}).addTo(m)
       .bindTooltip('Start',{permanent:false});
-    L.circleMarker(e,{radius:5,fillColor:'#c9bfb0',color:'#6b6058',weight:1.5,fillOpacity:1}).addTo(m)
+    L.circleMarker(e,{radius:5,fillColor:'#ff453a',color:'#fff',weight:2,fillOpacity:1}).addTo(m)
       .bindTooltip('End',{permanent:false});
     t.points.forEach(p=>allPts.push(p));
   });
@@ -455,47 +515,42 @@ async function delEntry(id){
 
 // ── Forms ─────────────────────────────────────────────────────────────────
 function openNewForm(){activeId=null;renderSidebar();renderForm({title:'',body:'',event:'',place:'',entry_date:today(),lat:null,lng:null},false);}
-async function openEditForm(id){const e=await api.get(`/api/entries/${id}`);renderForm(e,true);}
+async function openEditForm(id){activeId=id;renderSidebar();const e=await api.get(`/api/entries/${id}`);renderForm(e,true);}
 
 function renderForm(e,isEdit){
   setListContent(`<div class="scroll-wrap"><form onsubmit="return false">
-    <label class="f-lbl">Title</label>
-    <input class="f-field f-title" id="f-title" placeholder="Give this entry a title…" value="${esc(e.title)}">
+    <div class="form-title">${isEdit?'Edit Entry':'New Entry'}</div>
 
-    <div class="f-date-wrap">
-      <label class="f-date-lbl">Date — backdate freely</label>
-      <input type="date" id="f-date" value="${e.entry_date||today()}">
+    <div class="group">
+      <div class="group-row"><input class="f-field f-title" id="f-title" placeholder="Title" value="${esc(e.title)}"></div>
+      <div class="group-row tall"><textarea class="f-field f-body" id="f-body" placeholder="Write your thoughts…">${esc(e.body||'')}</textarea></div>
     </div>
 
-    <div class="f-row" style="margin-bottom:20px">
-      <div>
-        <label class="f-lbl">Event</label>
-        <input class="f-field" id="f-event" placeholder="e.g. Road trip" value="${esc(e.event||'')}" style="margin-bottom:0">
+    <label class="f-lbl">Details</label>
+    <div class="group">
+      <div class="group-row"><label for="f-date">Date</label><span style="flex:1"></span><input type="date" id="f-date" value="${e.entry_date||today()}"></div>
+      <div class="group-row"><label for="f-event">Event</label><input class="f-field" id="f-event" placeholder="Road trip" value="${esc(e.event||'')}"></div>
+      <div class="group-row"><label for="f-place">Place</label><input class="f-field" id="f-place" placeholder="Kelowna" value="${esc(e.place||'')}"></div>
+    </div>
+
+    <label class="f-lbl">Location</label>
+    <div class="group">
+      <div class="loc-row">
+        <div class="loc-coords" id="coord-display">${e.lat&&e.lng?`${e.lat.toFixed(5)}, ${e.lng.toFixed(5)}`:'Not set'}</div>
+        <button type="button" class="btn btn-sm btn-plain" id="btn-toggle-map">Choose on Map</button>
       </div>
-      <div>
-        <label class="f-lbl">Place name</label>
-        <input class="f-field" id="f-place" placeholder="e.g. Kelowna" value="${esc(e.place||'')}" style="margin-bottom:0">
-      </div>
+      <div id="pick-map"></div>
     </div>
-
-    <label class="f-lbl">Entry</label>
-    <textarea class="f-field f-body" id="f-body" placeholder="Write your thoughts…">${esc(e.body||'')}</textarea>
-
-    <label class="f-lbl">Pin on map</label>
-    <div class="loc-row">
-      <div class="loc-coords" id="coord-display">${e.lat&&e.lng?`${e.lat.toFixed(5)}, ${e.lng.toFixed(5)}`:'No location set — or upload a GPX to auto-pin'}</div>
-      <button type="button" class="btn btn-sm" id="btn-toggle-map">📍 Pick</button>
-    </div>
+    <div class="hint">Tap the map to drop a pin. Adding a GPX route also sets this automatically.</div>
     <input type="hidden" id="f-lat" value="${e.lat||''}">
     <input type="hidden" id="f-lng" value="${e.lng||''}">
-    <div id="pick-map"></div>
 
     <div class="f-actions">
       <button type="button" class="btn btn-gold" onclick="${isEdit?`saveEdit('${e.id}')`:'saveNew()'}">
-        ${isEdit?'Save changes':'Save entry'}
+        ${isEdit?'Save':'Save Entry'}
       </button>
       <button type="button" class="btn" onclick="${isEdit?`openEntry('${e.id}')`:'showEmpty()'}">Cancel</button>
-      ${isEdit?`<button type="button" class="btn btn-sm btn-danger" style="margin-left:auto" onclick="delEntry('${e.id}')">Delete</button>`:''}
+      ${isEdit?`<button type="button" class="btn btn-danger" style="margin-left:auto" onclick="delEntry('${e.id}')">${ico('trash')}Delete</button>`:''}
     </div>
   </form></div>`);
 
@@ -505,7 +560,7 @@ function renderForm(e,isEdit){
     let shown=false;
     btn.addEventListener('click',()=>{
       shown=!shown; container.classList.toggle('visible',shown);
-      btn.textContent=shown?'✕ Close':'📍 Pick';
+      btn.textContent=shown?'Done':'Choose on Map';
       if(shown&&!pickMap){
         const iLat=parseFloat(document.getElementById('f-lat').value)||51;
         const iLng=parseFloat(document.getElementById('f-lng').value)||0;
@@ -566,13 +621,13 @@ function refreshWorldMap(){
     if(hasTracks){
       e.tracks.forEach(t=>{
         if(!t.points||!t.points.length) return;
-        const line=L.polyline(t.points,{color:'#b8956a',weight:2,opacity:.75}).addTo(worldMap);
+        const line=L.polyline(t.points,{color:'#0a84ff',weight:3.5,opacity:.9,lineCap:'round',lineJoin:'round'}).addTo(worldMap);
         const distStr=t.distance_km?`${t.distance_km} km`:'';
-        const tags=[e.place&&`📍 ${e.place}`,e.event&&`◆ ${e.event}`].filter(Boolean).join(' · ');
+        const tags=[e.place,e.event].filter(Boolean).map(esc).join(' · ');
         line.bindPopup(`
           <div class="map-popup-title">${esc(e.title)}</div>
           <div class="map-popup-meta">${fmtDate(e.entry_date)}${tags?' · '+tags:''}</div>
-          ${distStr?`<div class="map-popup-dist">〜 ${distStr}</div>`:''}
+          ${distStr?`<div class="map-popup-dist">${distStr}</div>`:''}
           <div class="map-popup-link" onclick="viewFromMap('${e.id}')">Open entry →</div>`,{maxWidth:240});
         worldLayers.push(line);
       });
@@ -584,7 +639,7 @@ function refreshWorldMap(){
       }
     } else if(e.lat&&e.lng){
       const m=L.circleMarker([e.lat,e.lng],pinStyle(8)).addTo(worldMap);
-      const tags=[e.place&&`📍 ${e.place}`,e.event&&`◆ ${e.event}`].filter(Boolean).join(' · ');
+      const tags=[e.place,e.event].filter(Boolean).map(esc).join(' · ');
       m.bindPopup(`
         <div class="map-popup-title">${esc(e.title)}</div>
         <div class="map-popup-meta">${fmtDate(e.entry_date)}${tags?' · '+tags:''}</div>
@@ -613,8 +668,9 @@ function switchToMapView(){
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function setListContent(html){document.getElementById('view-list').innerHTML=html;}
-function showEmpty(){activeId=null;renderSidebar();setListContent(`<div class="empty-state"><div class="empty-glyph">✦</div><p>Select or create an entry</p></div>`);}
-function pinStyle(r=8){return{radius:r,fillColor:'#b8956a',color:'#7a6040',weight:1.5,opacity:1,fillOpacity:.9};}
+function showEmpty(){activeId=null;renderSidebar();setListContent(`<div class="empty-state"><div class="empty-glyph">${ico('book')}</div><p>No entry selected</p><small>Choose one from the list, or press + to write a new one.</small></div>`);}
+function fmtLongDate(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
+function pinStyle(r=8){return{radius:r,fillColor:'#0a84ff',color:'#fff',weight:2.5,opacity:1,fillOpacity:1};}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function today(){return new Date().toISOString().slice(0,10);}
 function fmtDate(d){if(!d)return'—';return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
@@ -651,6 +707,7 @@ document.getElementById('filter-event').addEventListener('change',e=>{filterEven
 document.getElementById('filter-place').addEventListener('change',e=>{filterPlace=e.target.value;loadEntries();});
 document.getElementById('btn-clear').addEventListener('click',()=>{filterEvent='';filterPlace='';document.getElementById('filter-event').value='';document.getElementById('filter-place').value='';loadEntries();});
 
+showEmpty();
 api.get('/api/drive/status').then(s=>{driveConnected=s.connected;}).catch(()=>{});
 if(new URLSearchParams(location.search).get('drive')==='connected'){
   history.replaceState(null,'','/'); setTimeout(()=>toast('Google Drive connected'),300);
